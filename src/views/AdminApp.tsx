@@ -269,7 +269,7 @@ export default function AdminApp() {
               <div className="bg-white p-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex flex-col items-center text-center gap-4">
                 <h3 className="font-black text-xl uppercase">Splash Logo</h3>
                 <div className="w-32 h-32 rounded-full border-4 border-black overflow-hidden bg-gray-100">
-                  <img src={settings.splashLogo || '/favicon.png'} alt="Splash" className="w-full h-full object-cover" />
+                  <img src={settings.splashLogo || '/favicon.png?v=2'} alt="Splash" className="w-full h-full object-cover" />
                 </div>
                 <label className="bg-[#FDD835] text-black border-4 border-black py-3 px-6 rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase cursor-pointer">
                   Update Logo

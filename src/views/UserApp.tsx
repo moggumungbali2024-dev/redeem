@@ -217,7 +217,7 @@ function LoginView({ onLogin, onGoRegister }: { onLogin: (u: User) => void, onGo
     <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
       <div className="w-full max-w-sm bg-[#FDD835] border-[4px] border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white border-[4px] border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-           <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover p-2" />
+           <img src="/favicon.png?v=2" alt="Logo" className="w-full h-full object-cover p-2" />
         </div>
         <h2 className="text-3xl font-black text-center mt-6 mb-6 uppercase tracking-tighter">Welcome Back!</h2>
         
@@ -289,7 +289,7 @@ function RegisterView({ onRegister, onGoLogin }: { onRegister: (u: User) => void
     <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
       <div className="w-full max-w-sm bg-[#43A047] border-[4px] border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
         <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white border-[4px] border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
-           <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover p-2" />
+           <img src="/favicon.png?v=2" alt="Logo" className="w-full h-full object-cover p-2" />
         </div>
         <h2 className="text-3xl font-black text-center mt-6 mb-6 uppercase tracking-tighter text-white">Join the Fun!</h2>
         
