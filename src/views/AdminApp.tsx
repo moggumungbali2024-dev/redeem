@@ -163,17 +163,43 @@ export default function AdminApp() {
         <div className="max-w-4xl mx-auto">
           {tab === 'partners' && (
             <div className="flex flex-col gap-4">
+              {/* Pending Vendor Approvals */}
+              {partners.filter(p => p.approvalStatus === 'pending').length > 0 && (
+                <div className="bg-[#FFF3E0] border-4 border-[#E65100] rounded-2xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <h3 className="font-black uppercase text-[#E65100] flex items-center gap-2 mb-3">
+                    ⏳ Vendor Menunggu Persetujuan ({partners.filter(p => p.approvalStatus === 'pending').length})
+                  </h3>
+                  <div className="flex flex-col gap-3">
+                    {partners.filter(p => p.approvalStatus === 'pending').map(p => (
+                      <div key={p.id} className="bg-white border-2 border-black rounded-xl p-3 flex items-center gap-3">
+                        {p.logo ? <img src={p.logo} alt="logo" className="w-12 h-12 rounded-xl object-cover border-2 border-black" /> : <div className="w-12 h-12 rounded-xl border-2 border-black bg-stone-100 flex items-center justify-center text-2xl">🏪</div>}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-sm truncate">{p.name}</p>
+                          <p className="text-xs text-stone-500 font-bold">{p.vendorLoginWhatsapp}</p>
+                          <p className="text-xs text-stone-400">{categories.find(c => c.id === p.categoryId)?.name.en}</p>
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button onClick={async () => { await api.approveVendor(p.id); const updated = await api.getPartners(); setPartners(updated); }} className="bg-[#43A047] text-white border-2 border-black px-3 py-2 rounded-lg font-black text-xs uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all">✓ Approve</button>
+                          <button onClick={async () => { await api.rejectVendor(p.id); const updated = await api.getPartners(); setPartners(updated); }} className="bg-[#E53935] text-white border-2 border-black px-3 py-2 rounded-lg font-black text-xs uppercase shadow-[2px_2px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5 transition-all">✕ Reject</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button onClick={() => openModal('partner')} className="bg-[#43A047] text-white border-4 border-black py-4 rounded-xl font-black flex justify-center items-center gap-2 mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase">
                 <Plus size={20} strokeWidth={3} /> Add Partner
               </button>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {partners.map(p => (
+                {partners.filter(p => p.approvalStatus !== 'pending').map(p => (
                   <div key={p.id} className="bg-white p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex flex-col gap-4">
                     <div className="flex items-center gap-4">
                       <img src={p.logo} alt="logo" className="w-16 h-16 rounded-xl object-cover border-2 border-black" />
                       <div className="flex-1">
                         <h3 className="font-black text-black text-lg leading-tight uppercase">{p.name}</h3>
                         <p className="text-xs font-bold text-gray-500 uppercase">{categories.find(c => c.id === p.categoryId)?.name.en || 'Unknown'}</p>
+                        {p.approvalStatus === 'rejected' && <span className="text-xs text-red-600 font-black uppercase">⛔ Ditolak</span>}
+                        {p.approvalStatus === 'approved' && <span className="text-xs text-green-600 font-black uppercase">✅ Aktif</span>}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -185,6 +211,7 @@ export default function AdminApp() {
               </div>
             </div>
           )}
+
 
           {tab === 'categories' && (
             <div className="flex flex-col gap-4">

@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
-import { Partner, Category, AppEvent, Redemption, User } from '../types';
+import { Partner, Category, AppEvent, Redemption, User, Promo } from '../types';
 import { 
   ArrowLeft, Store, Calendar, QrCode, FileSpreadsheet, 
   Settings, Users, Edit3, Trash2, Plus, LogOut, CheckCircle, 
   MapPin, Clock, Instagram, Phone, Globe, Upload, X,
-  TrendingUp, Bell, Download, RefreshCw, Sparkles, Ticket, Printer
+  TrendingUp, Bell, Download, RefreshCw, Sparkles, Ticket, Printer,
+  Tag, Percent, Gift, ChevronRight, ChevronLeft, Eye, EyeOff, ToggleLeft, ToggleRight,
+  Video
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
@@ -16,6 +18,299 @@ import { cn, triggerHaptic } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { uploadImage } from '../supabase';
 
+// ========== VENDOR LOGIN SCREEN ==========
+function VendorLoginScreen({ onLogin }: { onLogin: (role: 'admin' | 'vendor', partner: Partner | null) => void }) {
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [pendingPartner, setPendingPartner] = useState<Partner | null>(null);
+
+  // Onboarding wizard state
+  const [step, setStep] = useState(1);
+  const [obName, setObName] = useState('');
+  const [obCategory, setObCategory] = useState('eat');
+  const [obDescEn, setObDescEn] = useState('');
+  const [obDescId, setObDescId] = useState('');
+  const [obDescKo, setObDescKo] = useState('');
+  const [obMapsUrl, setObMapsUrl] = useState('');
+  const [obInstagram, setObInstagram] = useState('');
+  const [obWhatsapp, setObWhatsapp] = useState('');
+  const [obWebsite, setObWebsite] = useState('');
+  const [obLogo, setObLogo] = useState('');
+  const [obBanner, setObBanner] = useState('');
+  const [obLoginWa, setObLoginWa] = useState('');
+  const [obLoginPass, setObLoginPass] = useState('');
+  const [obLoginPass2, setObLoginPass2] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [submitDone, setSubmitDone] = useState(false);
+
+  useEffect(() => { api.getCategories().then(setCategories); }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await api.vendorLogin(whatsapp, password);
+      if (res.success) {
+        if (res.role === 'admin') {
+          onLogin('admin', null);
+        } else if (res.partner) {
+          onLogin('vendor', res.partner);
+        }
+      } else if (res.status === 'pending' && res.partner) {
+        setPendingPartner(res.partner);
+      } else {
+        alert(res.error || 'Login gagal');
+      }
+    } catch {
+      alert('Error saat login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogoUploadOb = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setObLogo(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+  const handleBannerUploadOb = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setObBanner(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRegisterSubmit = async () => {
+    if (!obName || !obLoginWa || !obLoginPass) { alert('Nama, WhatsApp login, dan Password wajib diisi'); return; }
+    if (obLoginPass !== obLoginPass2) { alert('Password tidak cocok!'); return; }
+    setLoading(true);
+    try {
+      const res = await api.vendorRegister({
+        name: obName,
+        categoryId: obCategory,
+        description: { ko: obDescKo || obDescEn, en: obDescEn, id: obDescId || obDescEn },
+        vendorLoginWhatsapp: obLoginWa,
+        vendorPassword: obLoginPass,
+        logo: obLogo,
+        banner: obBanner,
+        instagram: obInstagram,
+        whatsapp: obWhatsapp,
+        website: obWebsite,
+        googleMapsUrl: obMapsUrl,
+      });
+      if (res.success) {
+        setSubmitDone(true);
+      } else {
+        alert(res.error || 'Registrasi gagal');
+      }
+    } catch {
+      alert('Error saat registrasi');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Pending approval screen
+  if (pendingPartner) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
+        <div className="w-full max-w-sm bg-[#FDD835] border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+          <div className="text-6xl mb-4">⏳</div>
+          <h2 className="text-2xl font-black uppercase mb-2">Menunggu Persetujuan</h2>
+          <p className="font-bold text-sm mb-6">Akun vendor <strong>{pendingPartner.name}</strong> masih dalam proses review oleh admin. Anda akan mendapat konfirmasi segera.</p>
+          <button onClick={() => setPendingPartner(null)} className="w-full bg-black text-white border-4 border-black p-3 rounded-xl font-black uppercase hover:bg-stone-800 transition-all">Kembali ke Login</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding wizard
+  if (mode === 'register') {
+    if (submitDone) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
+          <div className="w-full max-w-sm bg-[#43A047] border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-black uppercase mb-2 text-white">Pendaftaran Terkirim!</h2>
+            <p className="font-bold text-sm mb-6 text-white">Bisnis Anda sedang direview oleh tim kami. Kami akan menghubungi Anda via WhatsApp <strong>{obLoginWa}</strong> setelah disetujui.</p>
+            <button onClick={() => { setMode('login'); setSubmitDone(false); setStep(1); }} className="w-full bg-[#FDD835] text-black border-4 border-black p-3 rounded-xl font-black uppercase hover:opacity-90 transition-all">Kembali ke Login</button>
+          </div>
+        </div>
+      );
+    }
+
+    const stepTitles = ['Info Bisnis', 'Kontak & Lokasi', 'Foto & Media', 'Akun Vendor'];
+    return (
+      <div className="flex-1 flex flex-col bg-[#FFF8F0] min-h-full">
+        {/* Header */}
+        <div className="p-4 flex items-center gap-3 border-b-4 border-black bg-white shrink-0">
+          <button onClick={() => step > 1 ? setStep(s => s - 1) : setMode('login')} className="p-2 bg-white border-4 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-0.5 active:translate-y-0.5">
+            <ArrowLeft size={18} strokeWidth={3} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-xl font-black uppercase tracking-tight">Daftar sebagai Vendor</h1>
+            <p className="text-xs font-bold text-stone-500 uppercase">Langkah {step} dari 4 · {stepTitles[step-1]}</p>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="h-2 bg-stone-200 shrink-0">
+          <div className="h-full bg-[#FDD835] border-r-4 border-black transition-all" style={{ width: `${(step/4)*100}%` }} />
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {step === 1 && (
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-black uppercase">Ceritakan bisnis kamu! 🏪</h2>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Nama Bisnis *</label>
+                <input value={obName} onChange={e => setObName(e.target.value)} placeholder="e.g. Warung Sari Bali" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Kategori</label>
+                <select value={obCategory} onChange={e => setObCategory(e.target.value)} className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none">
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name.en}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Deskripsi (English)</label>
+                <textarea value={obDescEn} onChange={e => setObDescEn(e.target.value)} rows={3} placeholder="Tell customers about your place..." className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none resize-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Deskripsi (Indonesia)</label>
+                <textarea value={obDescId} onChange={e => setObDescId(e.target.value)} rows={3} placeholder="Ceritakan tentang tempat kamu..." className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none resize-none" />
+              </div>
+            </div>
+          )}
+          {step === 2 && (
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-black uppercase">Kontak & Lokasi 📍</h2>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Link Google Maps</label>
+                <input value={obMapsUrl} onChange={e => setObMapsUrl(e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+                <p className="text-xs text-stone-500 font-bold mt-1">💡 Copy link dari Google Maps → koordinat otomatis terset</p>
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">WhatsApp Bisnis</label>
+                <input value={obWhatsapp} onChange={e => setObWhatsapp(e.target.value)} placeholder="+6281234567890" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Instagram</label>
+                <input value={obInstagram} onChange={e => setObInstagram(e.target.value)} placeholder="@namabisnis" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Website (opsional)</label>
+                <input value={obWebsite} onChange={e => setObWebsite(e.target.value)} placeholder="https://..." className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+            </div>
+          )}
+          {step === 3 && (
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-black uppercase">Foto & Media 📸</h2>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-2">Logo Bisnis</label>
+                {obLogo ? <img src={obLogo} className="w-24 h-24 rounded-2xl border-4 border-black object-cover mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" /> : null}
+                <label className="flex items-center gap-2 bg-[#FDD835] border-4 border-black p-3 rounded-xl font-black text-sm cursor-pointer hover:opacity-90 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <Upload size={16} /> Upload Logo
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUploadOb} />
+                </label>
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-2">Banner / Cover Photo</label>
+                {obBanner ? <img src={obBanner} className="w-full h-32 rounded-2xl border-4 border-black object-cover mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" /> : null}
+                <label className="flex items-center gap-2 bg-[#1E88E5] text-white border-4 border-black p-3 rounded-xl font-black text-sm cursor-pointer hover:opacity-90 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  <Upload size={16} /> Upload Banner
+                  <input type="file" accept="image/*,video/*" className="hidden" onChange={handleBannerUploadOb} />
+                </label>
+              </div>
+            </div>
+          )}
+          {step === 4 && (
+            <div className="flex flex-col gap-4">
+              <h2 className="text-2xl font-black uppercase">Akun Vendor 🔐</h2>
+              <p className="text-sm font-bold text-stone-600">Buat kredensial untuk login ke dashboard vendor kamu.</p>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">WhatsApp untuk Login *</label>
+                <input value={obLoginWa} onChange={e => setObLoginWa(e.target.value)} placeholder="+6281234567890" type="tel" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Password *</label>
+                <input value={obLoginPass} onChange={e => setObLoginPass(e.target.value)} placeholder="Min. 6 karakter" type="password" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div>
+                <label className="text-xs font-black uppercase tracking-wider block mb-1">Konfirmasi Password *</label>
+                <input value={obLoginPass2} onChange={e => setObLoginPass2(e.target.value)} placeholder="Ulangi password" type="password" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:outline-none" />
+              </div>
+              <div className="bg-[#FFF8F0] border-4 border-black rounded-2xl p-4">
+                <p className="text-xs font-black uppercase tracking-wider text-stone-600 mb-2">Review Pendaftaran</p>
+                <p className="text-sm font-bold">🏪 {obName || '(Belum diisi)'}</p>
+                <p className="text-sm font-bold">📱 {obLoginWa || '(Belum diisi)'}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t-4 border-black bg-white shrink-0">
+          {step < 4 ? (
+            <button onClick={() => { if (step === 1 && !obName) { alert('Nama bisnis wajib diisi'); return; } setStep(s => s + 1); }} className="w-full bg-[#FDD835] border-4 border-black p-4 rounded-xl font-black text-xl uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 transition-all flex items-center justify-center gap-2">
+              Lanjut <ChevronRight size={20} strokeWidth={3} />
+            </button>
+          ) : (
+            <button onClick={handleRegisterSubmit} disabled={loading} className="w-full bg-[#43A047] text-white border-4 border-black p-4 rounded-xl font-black text-xl uppercase shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-2 active:translate-y-2 transition-all disabled:opacity-60">
+              {loading ? '⏳ Mendaftar...' : '🚀 Kirim Pendaftaran'}
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Login screen
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
+      <div className="w-full max-w-sm bg-[#FDD835] border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative mt-10">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white border-4 border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+          <img src="/favicon.png?v=2" alt="Logo" className="w-full h-full object-cover p-2" onError={(e) => { (e.target as HTMLImageElement).style.display='none'; }} />
+          <Store size={32} className="absolute" />
+        </div>
+        <h2 className="text-3xl font-black text-center mt-6 mb-2 uppercase tracking-tighter">Vendor Portal</h2>
+        <p className="text-center text-sm font-bold text-stone-700 mb-6">Masuk sebagai vendor atau admin</p>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-black uppercase tracking-wider mb-2 block">WhatsApp / Admin ID</label>
+            <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} placeholder="+6281234... atau admin" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" required />
+          </div>
+          <div>
+            <label className="text-xs font-black uppercase tracking-wider mb-2 block">Password</label>
+            <div className="relative">
+              <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] pr-12" required />
+              <button type="button" onClick={() => setShowPass(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500">{showPass ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+            </div>
+          </div>
+          <button type="submit" disabled={loading} className="w-full bg-[#1E88E5] text-white border-4 border-black p-4 rounded-xl font-black text-xl uppercase mt-2 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-[4px] active:shadow-none flex items-center justify-center disabled:opacity-70">
+            {loading ? <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" /> : 'Masuk'}
+          </button>
+        </form>
+        <p className="mt-6 text-center font-bold text-sm">
+          Belum punya akun vendor? <br/>
+          <button type="button" onClick={() => { setMode('register'); setStep(1); }} className="mt-2 text-[#E53935] uppercase font-black border-b-3 border-[#E53935] hover:text-black transition-colors">Daftar Sekarang →</button>
+        </p>
+      </div>
+      <button onClick={() => navigate('/')} className="mt-8 text-stone-500 font-bold text-sm flex items-center gap-1 hover:text-black transition-colors">
+        <ArrowLeft size={14} /> Kembali ke User App
+      </button>
+    </div>
+  );
+}
+
 export default function VendorApp() {
   const navigate = useNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -23,20 +318,20 @@ export default function VendorApp() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   
-  // Auth/Selected Vendor State
+  // Auth State: null = not logged in, 'admin' = admin, 'vendor' = vendor
+  const [authRole, setAuthRole] = useState<'admin' | 'vendor' | null>(() => {
+    return (localStorage.getItem('v_role') as 'admin' | 'vendor' | null) || null;
+  });
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(() => {
     return localStorage.getItem('m_vendor_id') || null;
   });
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scan' | 'qr_generator' | 'profile' | 'events'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scan' | 'qr_generator' | 'profile' | 'events' | 'promos'>('dashboard');
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [promos, setPromos] = useState<Promo[]>([]);
 
   // Toast notifications state
-  interface Toast {
-    id: string;
-    message: string;
-    type: 'success' | 'info' | 'warning';
-  }
+  interface Toast { id: string; message: string; type: 'success' | 'info' | 'warning'; }
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   // Peak Hour simulation toggle
@@ -44,7 +339,6 @@ export default function VendorApp() {
 
   // QR Generator state
   const [selectedCouponId, setSelectedCouponId] = useState<string>('');
-  const [qrType, setQrType] = useState<'claim' | 'verify'>('claim');
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
@@ -126,7 +420,24 @@ export default function VendorApp() {
   const [manualQRInput, setManualQRInput] = useState('');
   const [processingScan, setProcessingScan] = useState(false);
 
-  const activeVendor = partners.find(p => p.id === selectedVendorId);
+  const activeVendor = authRole === 'admin' ? null : partners.find(p => p.id === selectedVendorId);
+
+  const handleLogin = (role: 'admin' | 'vendor', partner: Partner | null) => {
+    setAuthRole(role);
+    localStorage.setItem('v_role', role);
+    if (partner) {
+      setSelectedVendorId(partner.id);
+      localStorage.setItem('m_vendor_id', partner.id);
+    }
+  };
+
+  const handleLogout = () => {
+    triggerHaptic('tap');
+    setAuthRole(null);
+    setSelectedVendorId(null);
+    localStorage.removeItem('v_role');
+    localStorage.removeItem('m_vendor_id');
+  };
 
   const loadData = async () => {
     try {
@@ -143,13 +454,12 @@ export default function VendorApp() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   useEffect(() => {
     if (selectedVendorId) {
       api.getRedemptions(selectedVendorId).then(setRedemptions);
+      api.getPromos(selectedVendorId).then(setPromos);
     }
   }, [selectedVendorId]);
 
@@ -157,6 +467,7 @@ export default function VendorApp() {
     if (activeVendor) {
       setVendorName(activeVendor.name);
       setVendorLogo(activeVendor.logo);
+      setVendorBanner(activeVendor.banner || '');
       setVendorDescriptionKo(activeVendor.description?.ko || '');
       setVendorDescriptionEn(activeVendor.description?.en || '');
       setVendorDescriptionId(activeVendor.description?.id || '');
@@ -182,7 +493,6 @@ export default function VendorApp() {
 
   useEffect(() => {
     if (!simulatePeakHours || !selectedVendorId || !activeVendor) return;
-
     const interval = setInterval(async () => {
       if (users.length === 0) return;
       const randomUser = users[Math.floor(Math.random() * users.length)];
@@ -190,11 +500,7 @@ export default function VendorApp() {
       if (randomUser && randomCoupon) {
         try {
           await api.saveCoupon(randomCoupon.id);
-          const qrDataStr = JSON.stringify({
-            userId: randomUser.id,
-            couponId: randomCoupon.id,
-            partnerId: activeVendor.id
-          });
+          const qrDataStr = JSON.stringify({ userId: randomUser.id, couponId: randomCoupon.id, partnerId: activeVendor.id });
           const res = await api.scanQRRedeem(qrDataStr);
           if (res.success) {
             showToast(`⚡ Peak Hour: ${randomUser.name} redeemed "${randomCoupon.title.en}"!`, 'success');
@@ -202,28 +508,14 @@ export default function VendorApp() {
             setRedemptions(updatedReds);
             loadData();
           }
-        } catch (e) {
-          console.error("Auto scan simulation error:", e);
-        }
+        } catch (e) { console.error("Auto scan simulation error:", e); }
       }
     }, 12000);
-
     return () => clearInterval(interval);
   }, [simulatePeakHours, selectedVendorId, activeVendor, users]);
 
-  const handleSelectVendor = (vendorId: string) => {
-    triggerHaptic('success');
-    setSelectedVendorId(vendorId);
-    localStorage.setItem('m_vendor_id', vendorId);
-  };
-
-  const handleLogout = () => {
-    triggerHaptic('tap');
-    setSelectedVendorId(null);
-    localStorage.removeItem('m_vendor_id');
-  };
-
   // Export redemptions data to CSV
+
   const handleExportCSV = () => {
     if (!activeVendor) return;
     triggerHaptic('success');
@@ -488,43 +780,17 @@ export default function VendorApp() {
     ? Math.round(redemptions.reduce((acc, curr) => acc + curr.userAge, 0) / redemptions.length)
     : 0;
 
-  // Render Selection screen if no vendor chosen
-  if (!selectedVendorId || !activeVendor) {
-    return (
-      <div className="flex-1 bg-[#FFF8F0] min-h-full p-6 flex flex-col text-black font-sans">
-        <div className="p-4 md:p-6 flex items-center gap-3 border-b-4 border-black mb-8 shrink-0">
-          <button onClick={() => navigate('/')} className="p-2 -ml-2 text-black bg-white border-4 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] transition-all">
-            <ArrowLeft size={20} strokeWidth={3} />
-          </button>
-          <h1 className="text-2xl font-black uppercase text-black">Vendor Portal</h1>
-        </div>
 
-        <div className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center">
-          <div className="bg-white p-8 border-4 border-black rounded-[32px] shadow-[8px_8px_0px_rgba(0,0,0,1)] flex flex-col gap-6 text-center">
-            <div className="bg-[#FFF8F0] w-20 h-20 rounded-3xl border-4 border-black flex items-center justify-center mx-auto shadow-[4px_4px_0px_rgba(0,0,0,1)] text-black">
-              <Store size={40} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h2 className="text-3xl font-black uppercase tracking-tight">Vendor Login</h2>
-              <p className="text-stone-500 font-bold text-xs uppercase mt-1 tracking-wider">Select your business venue to continue</p>
-            </div>
+  // Auth guard: show login screen if not authenticated
+  if (!authRole) {
+    return <VendorLoginScreen onLogin={handleLogin} />;
+  }
 
-            <div className="flex flex-col gap-3 text-left max-h-[250px] overflow-y-auto pr-1">
-              {partners.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => handleSelectVendor(p.id)}
-                  className="w-full bg-stone-50 hover:bg-stone-100 border-4 border-black p-4 rounded-2xl font-black text-sm flex items-center gap-3 transition-all hover:-translate-y-[1px] active:translate-y-[2px] shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none"
-                >
-                  <img src={p.logo} alt={p.name} className="w-10 h-10 rounded-xl border-2 border-black object-cover" />
-                  <span className="truncate">{p.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // If admin logged in via vendor portal, redirect to admin
+  if (authRole === 'admin') {
+    // Navigate to admin
+    navigate('/admin');
+    return null;
   }
 
   return (
@@ -600,12 +866,22 @@ export default function VendorApp() {
         <button 
           onClick={() => { triggerHaptic('tap'); setActiveTab('events'); }}
           className={cn(
-            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
+            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider border-r-4 border-black transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
             activeTab === 'events' ? "bg-[#FDD835] text-black" : "text-gray-500 hover:text-black"
           )}
         >
           <Calendar size={14} strokeWidth={2.5} />
           Events
+        </button>
+        <button 
+          onClick={() => { triggerHaptic('tap'); setActiveTab('promos'); }}
+          className={cn(
+            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
+            activeTab === 'promos' ? "bg-[#FDD835] text-black" : "text-gray-500 hover:text-black"
+          )}
+        >
+          <Tag size={14} strokeWidth={2.5} />
+          Promos
         </button>
       </div>
 
@@ -1421,8 +1697,151 @@ export default function VendorApp() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-black uppercase">Button Text (EN)</label>
+                    <input 
+                      type="text" value={eventButtonTextEn} onChange={e => setEventButtonTextEn(e.target.value)}
+                      placeholder="e.g. Register / Buy Ticket"
+                      className="border-2 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] text-sm"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-black uppercase">Button Link</label>
+                    <input 
+                      type="text" value={eventButtonLink} onChange={e => setEventButtonLink(e.target.value)}
+                      placeholder="https://..."
+                      className="border-2 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] text-sm"
+                    />
+                  </div>
+                </div>
+
                 <button type="submit" className="w-full bg-[#43A047] text-white border-4 border-black py-3.5 rounded-xl font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:shadow-none transition-all mt-2">
                   Save Event
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* PROMO TAB */}
+      {activeTab === 'promos' && (
+        <div className="p-4 flex-1 overflow-y-auto max-w-[800px] mx-auto w-full pb-20">
+          <div className="flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-black uppercase">Promo Manager</h2>
+                <p className="text-xs font-bold text-stone-500">Kelola kode promo untuk pelanggan kamu</p>
+              </div>
+              <button onClick={() => { setEditingPromo(null); setPromoName(''); setPromoCode(''); setPromoType('discount_percent'); setPromoDiscount(''); setPromoStart(''); setPromoEnd(''); setPromoTerms(''); setPromoModalOpen(true); }} className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5">
+                <Plus size={14} strokeWidth={3}/> Tambah Promo
+              </button>
+            </div>
+
+            {promos.length === 0 ? (
+              <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
+                <div className="text-5xl mb-3">🏷️</div>
+                <h3 className="font-black uppercase">Belum Ada Promo</h3>
+                <p className="text-sm text-stone-500 font-bold mt-1">Buat promo pertama untuk menarik pelanggan!</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {promos.map(p => (
+                  <div key={p.id} className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="bg-[#FDD835] border-2 border-black font-mono font-black text-sm px-2.5 py-0.5 rounded-lg">{p.code}</span>
+                          <span className={`text-xs font-black uppercase px-2 py-0.5 rounded-full border-2 ${p.isActive ? 'bg-green-100 border-green-700 text-green-800' : 'bg-stone-100 border-stone-400 text-stone-500'}`}>{p.isActive ? 'Aktif' : 'Nonaktif'}</span>
+                        </div>
+                        <p className="font-black text-base mt-1">{p.name}</p>
+                        <p className="text-xs font-bold text-stone-500">{p.type === 'discount_percent' ? `${p.discountValue}% off` : p.type === 'discount_nominal' ? `Rp${p.discountValue?.toLocaleString()} off` : p.type === 'free' ? 'Free Item' : p.type === 'bogo' ? 'Buy 1 Get 1' : p.type === 'cashback' ? `${p.discountValue}% cashback` : 'Special'}</p>
+                        <p className="text-xs font-bold text-stone-400">{p.startDate} → {p.endDate}</p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={async () => { await api.updatePromo(selectedVendorId!, p.id, { isActive: !p.isActive }); api.getPromos(selectedVendorId!).then(setPromos); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all">{p.isActive ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} className="text-stone-400" />}</button>
+                        <button onClick={() => { setEditingPromo(p); setPromoName(p.name); setPromoCode(p.code); setPromoType(p.type); setPromoDiscount(String(p.discountValue || '')); setPromoStart(p.startDate); setPromoEnd(p.endDate); setPromoTerms(p.terms); setPromoModalOpen(true); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all"><Edit3 size={16} /></button>
+                        <button onClick={async () => { if (confirm('Hapus promo ini?')) { await api.deletePromo(selectedVendorId!, p.id); api.getPromos(selectedVendorId!).then(setPromos); } }} className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 transition-all text-rose-700"><Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                    {p.terms && <p className="text-[11px] font-bold text-stone-500 bg-stone-50 border border-stone-200 p-2 rounded-lg">{p.terms}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Promo Modal */}
+      <AnimatePresence>
+        {promoModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white border-4 border-black rounded-[32px] w-full max-w-md overflow-hidden shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative p-6 flex flex-col gap-4 text-black max-h-[90vh] overflow-y-auto"
+            >
+              <button type="button" onClick={() => setPromoModalOpen(false)} className="absolute top-4 right-4 p-2 bg-white border-2 border-black rounded-full hover:bg-stone-100 transition-all shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                <X size={16} strokeWidth={3} />
+              </button>
+              <h3 className="font-black text-xl uppercase">{editingPromo ? 'Edit Promo' : 'Buat Promo Baru 🏷️'}</h3>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const data = { name: promoName, code: promoCode, type: promoType, discountValue: Number(promoDiscount) || 0, startDate: promoStart, endDate: promoEnd, terms: promoTerms, isActive: true };
+                if (editingPromo) {
+                  await api.updatePromo(selectedVendorId!, editingPromo.id, data);
+                } else {
+                  await api.createPromo(selectedVendorId!, data);
+                }
+                api.getPromos(selectedVendorId!).then(setPromos);
+                setPromoModalOpen(false);
+              }} className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-black uppercase block mb-1">Nama Promo *</label>
+                  <input required value={promoName} onChange={e => setPromoName(e.target.value)} placeholder="e.g. Promo Akhir Pekan" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none" />
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase block mb-1">Kode Promo *</label>
+                  <input required value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())} placeholder="e.g. WEEKEND20" className="w-full border-4 border-black p-3.5 rounded-xl font-bold font-mono bg-[#FFF8F0] focus:outline-none uppercase" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-black uppercase block mb-1">Tipe Promo</label>
+                    <select value={promoType} onChange={e => setPromoType(e.target.value as Promo['type'])} className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none">
+                      <option value="discount_percent">% Diskon</option>
+                      <option value="discount_nominal">Rp Potongan</option>
+                      <option value="free">Free Item</option>
+                      <option value="bogo">Buy 1 Get 1</option>
+                      <option value="cashback">Cashback</option>
+                      <option value="other">Lainnya</option>
+                    </select>
+                  </div>
+                  {(promoType === 'discount_percent' || promoType === 'discount_nominal' || promoType === 'cashback') && (
+                    <div>
+                      <label className="text-xs font-black uppercase block mb-1">{promoType === 'discount_nominal' ? 'Nominal (Rp)' : 'Persen (%)'}</label>
+                      <input type="number" value={promoDiscount} onChange={e => setPromoDiscount(e.target.value)} placeholder="0" className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none" />
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-black uppercase block mb-1">Berlaku Mulai</label>
+                    <input type="date" required value={promoStart} onChange={e => setPromoStart(e.target.value)} className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase block mb-1">Berlaku Hingga</label>
+                    <input type="date" required value={promoEnd} onChange={e => setPromoEnd(e.target.value)} className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase block mb-1">Syarat & Ketentuan</label>
+                  <textarea value={promoTerms} onChange={e => setPromoTerms(e.target.value)} rows={3} placeholder="Berlaku untuk minimum pembelian Rp100.000, tidak dapat digabungkan dengan promo lain..." className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none resize-none" />
+                </div>
+                <button type="submit" className="w-full bg-[#FDD835] border-4 border-black p-4 rounded-xl font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-1 transition-all">
+                  {editingPromo ? '✏️ Simpan Perubahan' : '🚀 Buat Promo'}
                 </button>
               </form>
             </motion.div>

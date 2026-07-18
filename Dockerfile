@@ -12,18 +12,21 @@ RUN if [ -f package-lock.json ]; then npm install; \
     else npm install; \
     fi
 
-# Copy all source files
+# Copy all source files (including public/ which has favicon.png)
 COPY . .
 
-# Build the application
+# Build the application (Vite copies public/ to dist/ automatically)
 RUN npm run build
+
+# Verify favicon.png is in dist
+RUN ls -la dist/ && test -f dist/favicon.png && echo "favicon.png OK" || echo "WARNING: favicon.png not found in dist"
 
 # Runner stage
 FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Copy built assets from builder
+# Copy built assets from builder (dist/ already contains public/ files from Vite build)
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./

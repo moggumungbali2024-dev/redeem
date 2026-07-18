@@ -7,7 +7,9 @@ import { Partner, Category, AppSettings } from "./src/types";
 
 // In-memory DB
 let settings: AppSettings = {
-  splashLogo: "/favicon.png"
+  splashLogo: "/favicon.png",
+  adminId: "admin",
+  adminPassword: "admin123"
 };
 
 let categories: Category[] = [
@@ -732,6 +734,136 @@ async function startServer() {
     const { id } = req.params;
     partners = partners.filter(p => p.id !== id);
     await dbDelete('rnf_partners', id);
+    res.json({ success: true });
+  });
+
+  // Approve a vendor
+  app.put("/api/partners/:id/approve", async (req, res) => {
+    const idx = partners.findIndex(p => p.id === req.params.id);
+    if (idx >= 0) {
+      partners[idx] = { ...partners[idx], approvalStatus: 'approved' };
+      await dbUpsert('rnf_partners', partners[idx]);
+      res.json({ success: true, partner: partners[idx] });
+    } else {
+      res.status(404).json({ error: "Partner not found" });
+    }
+  });
+
+  // Reject a vendor
+  app.put("/api/partners/:id/reject", async (req, res) => {
+    const idx = partners.findIndex(p => p.id === req.params.id);
+    if (idx >= 0) {
+      partners[idx] = { ...partners[idx], approvalStatus: 'rejected' };
+      await dbUpsert('rnf_partners', partners[idx]);
+      res.json({ success: true, partner: partners[idx] });
+    } else {
+      res.status(404).json({ error: "Partner not found" });
+    }
+  });
+
+  // Vendor self-registration (onboarding)
+  app.post("/api/vendor/register", async (req, res) => {
+    const { name, categoryId, description, vendorLoginWhatsapp, vendorPassword, logo, banner, instagram, whatsapp, website, googleMapsUrl } = req.body;
+    if (!name || !vendorLoginWhatsapp || !vendorPassword) {
+      return res.status(400).json({ error: "Name, WhatsApp and Password are required" });
+    }
+    // Check if already registered
+    const existing = partners.find(p => p.vendorLoginWhatsapp === vendorLoginWhatsapp);
+    if (existing) {
+      return res.status(400).json({ error: "WhatsApp sudah terdaftar sebagai vendor" });
+    }
+    // Try geocoding from googleMapsUrl
+    let lat = req.body.latitude || null;
+    let lng = req.body.longitude || null;
+    if (!lat && googleMapsUrl) {
+      // Extract @lat,lng from Google Maps URL
+      const match = googleMapsUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (match) { lat = parseFloat(match[1]); lng = parseFloat(match[2]); }
+    }
+    const newPartner: Partner = {
+      id: "p" + Date.now(),
+      name,
+      categoryId: categoryId || 'eat',
+      distance: 1.0,
+      eta: 10,
+      description: description || { ko: '', en: '', id: '' },
+      logo: logo || '',
+      banner: banner || '',
+      instagram: instagram || '',
+      whatsapp: whatsapp || '',
+      website: website || '',
+      bestsellers: [],
+      coupons: [],
+      images: [],
+      googleMapsUrl: googleMapsUrl || '',
+      latitude: lat,
+      longitude: lng,
+      tier: 'basic',
+      vendorLoginWhatsapp,
+      vendorPassword,
+      approvalStatus: 'pending',
+      promos: []
+    };
+    partners.push(newPartner);
+    await dbUpsert('rnf_partners', newPartner);
+    res.json({ success: true, partner: newPartner });
+  });
+
+  // Vendor login
+  app.post("/api/vendor/login", (req, res) => {
+    const { whatsapp, password } = req.body;
+    // Check if admin trying to login via vendor portal
+    if (whatsapp === settings.adminId && password === settings.adminPassword) {
+      return res.json({ success: true, role: 'admin', partner: null });
+    }
+    // Check vendor credentials
+    const vendor = partners.find(p => p.vendorLoginWhatsapp === whatsapp && p.vendorPassword === password);
+    if (!vendor) {
+      return res.status(401).json({ error: "WhatsApp atau password salah" });
+    }
+    if (vendor.approvalStatus === 'pending') {
+      return res.status(403).json({ error: "Akun vendor masih menunggu persetujuan admin", status: 'pending', partner: vendor });
+    }
+    if (vendor.approvalStatus === 'rejected') {
+      return res.status(403).json({ error: "Pendaftaran vendor ditolak. Hubungi admin.", status: 'rejected' });
+    }
+    return res.json({ success: true, role: 'vendor', partner: vendor });
+  });
+
+  // Promo CRUD for a partner
+  app.get("/api/partners/:id/promos", (req, res) => {
+    const partner = partners.find(p => p.id === req.params.id);
+    if (!partner) return res.status(404).json({ error: "Not found" });
+    res.json(partner.promos || []);
+  });
+
+  app.post("/api/partners/:id/promos", async (req, res) => {
+    const idx = partners.findIndex(p => p.id === req.params.id);
+    if (idx < 0) return res.status(404).json({ error: "Not found" });
+    const newPromo = { ...req.body, id: "promo_" + Date.now(), isActive: true };
+    if (!partners[idx].promos) partners[idx].promos = [];
+    partners[idx].promos!.push(newPromo);
+    await dbUpsert('rnf_partners', partners[idx]);
+    res.json(newPromo);
+  });
+
+  app.put("/api/partners/:id/promos/:promoId", async (req, res) => {
+    const pIdx = partners.findIndex(p => p.id === req.params.id);
+    if (pIdx < 0) return res.status(404).json({ error: "Partner not found" });
+    const promos = partners[pIdx].promos || [];
+    const prIdx = promos.findIndex(pr => pr.id === req.params.promoId);
+    if (prIdx < 0) return res.status(404).json({ error: "Promo not found" });
+    promos[prIdx] = { ...promos[prIdx], ...req.body };
+    partners[pIdx].promos = promos;
+    await dbUpsert('rnf_partners', partners[pIdx]);
+    res.json(promos[prIdx]);
+  });
+
+  app.delete("/api/partners/:id/promos/:promoId", async (req, res) => {
+    const pIdx = partners.findIndex(p => p.id === req.params.id);
+    if (pIdx < 0) return res.status(404).json({ error: "Partner not found" });
+    partners[pIdx].promos = (partners[pIdx].promos || []).filter(pr => pr.id !== req.params.promoId);
+    await dbUpsert('rnf_partners', partners[pIdx]);
     res.json({ success: true });
   });
 

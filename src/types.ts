@@ -19,6 +19,18 @@ export interface Coupon {
   cost?: number; // Cost in points if type is 'redeem'
 }
 
+export interface Promo {
+  id: string;
+  name: string;
+  code: string;
+  type: 'free' | 'discount_nominal' | 'discount_percent' | 'cashback' | 'bogo' | 'other';
+  discountValue?: number; // for nominal or percent
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  terms: string;
+  isActive: boolean;
+}
+
 export interface Partner {
   id: string;
   name: string;
@@ -41,6 +53,13 @@ export interface Partner {
   adBannerUrl?: string;
   adText?: LocalizedString;
   banner?: string;
+  videoUrl?: string;
+  // Vendor auth & approval
+  vendorPassword?: string;
+  vendorLoginWhatsapp?: string;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  // Promos
+  promos?: Promo[];
 }
 
 export interface AppEvent {
@@ -51,6 +70,8 @@ export interface AppEvent {
   description?: LocalizedString;
   buttonText?: LocalizedString;
   buttonLink?: string;
+  // Vendor-created events
+  partnerId?: string;
 }
 
 export interface PointLog {
@@ -123,10 +144,10 @@ export interface Activity {
 
 export interface AppSettings {
   splashLogo: string;
+  adminId?: string;
+  adminPassword?: string;
 }
 
 export interface ClickData {
   [key: string]: number;
 }
-
-

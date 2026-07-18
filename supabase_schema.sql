@@ -21,11 +21,13 @@ DROP TABLE IF EXISTS rnf_users;
 -- ==========================================
 CREATE TABLE rnf_settings (
   id TEXT PRIMARY KEY,
-  "splashLogo" TEXT
+  "splashLogo" TEXT,
+  "adminId" TEXT DEFAULT 'admin',
+  "adminPassword" TEXT DEFAULT 'admin123'
 );
 
-INSERT INTO rnf_settings (id, "splashLogo") 
-VALUES ('default', '/favicon.png')
+INSERT INTO rnf_settings (id, "splashLogo", "adminId", "adminPassword") 
+VALUES ('default', '/favicon.png', 'admin', 'admin123')
 ON CONFLICT (id) DO NOTHING;
 
 -- ==========================================
@@ -69,7 +71,12 @@ CREATE TABLE rnf_partners (
   "isAdFeatured" BOOLEAN DEFAULT false,
   "adBannerUrl" TEXT,
   "adText" JSONB,
-  banner TEXT
+  banner TEXT,
+  "videoUrl" TEXT,
+  "vendorLoginWhatsapp" TEXT,
+  "vendorPassword" TEXT,
+  "approvalStatus" TEXT DEFAULT 'approved',
+  promos JSONB DEFAULT '[]'::jsonb
 );
 
 -- Seed Initial Partners
@@ -152,7 +159,8 @@ CREATE TABLE rnf_events (
   image TEXT NOT NULL,
   description JSONB,
   "buttonText" JSONB,
-  "buttonLink" TEXT
+  "buttonLink" TEXT,
+  "partnerId" TEXT
 );
 
 INSERT INTO rnf_events (id, title, date, image, description, "buttonText", "buttonLink") VALUES

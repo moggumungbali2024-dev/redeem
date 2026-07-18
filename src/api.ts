@@ -1,4 +1,4 @@
-import { Partner, Category, AppSettings, ClickData, User, AppEvent, Faq, Activity, Redemption } from './types';
+import { Partner, Category, AppSettings, ClickData, User, AppEvent, Faq, Activity, Redemption, Promo } from './types';
 
 export const api = {
 
@@ -17,6 +17,61 @@ export const api = {
       body: JSON.stringify({ whatsapp, password, name, email })
     });
     return res.json();
+  },
+
+  // Vendor Auth
+  vendorLogin: async (whatsapp: string, password: string): Promise<{ success: boolean; role?: 'admin' | 'vendor'; partner?: Partner | null; error?: string; status?: string }> => {
+    const res = await fetch('/api/vendor/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ whatsapp, password })
+    });
+    return res.json();
+  },
+  vendorRegister: async (data: {
+    name: string; categoryId: string; description: { ko: string; en: string; id: string };
+    vendorLoginWhatsapp: string; vendorPassword: string;
+    logo?: string; banner?: string; instagram?: string; whatsapp?: string; website?: string; googleMapsUrl?: string;
+  }): Promise<{ success: boolean; partner?: Partner; error?: string }> => {
+    const res = await fetch('/api/vendor/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  approveVendor: async (id: string): Promise<{ success: boolean }> => {
+    const res = await fetch(`/api/partners/${id}/approve`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } });
+    return res.json();
+  },
+  rejectVendor: async (id: string): Promise<{ success: boolean }> => {
+    const res = await fetch(`/api/partners/${id}/reject`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } });
+    return res.json();
+  },
+
+  // Promo CRUD
+  getPromos: async (partnerId: string): Promise<Promo[]> => {
+    const res = await fetch(`/api/partners/${partnerId}/promos`);
+    return res.json();
+  },
+  createPromo: async (partnerId: string, data: Omit<Promo, 'id'>): Promise<Promo> => {
+    const res = await fetch(`/api/partners/${partnerId}/promos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  updatePromo: async (partnerId: string, promoId: string, data: Partial<Promo>): Promise<Promo> => {
+    const res = await fetch(`/api/partners/${partnerId}/promos/${promoId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return res.json();
+  },
+  deletePromo: async (partnerId: string, promoId: string): Promise<void> => {
+    await fetch(`/api/partners/${partnerId}/promos/${promoId}`, { method: 'DELETE' });
   },
 
   getSettings: async (): Promise<AppSettings> => {
@@ -237,3 +292,5 @@ export const api = {
     return res.json();
   }
 };
+
+
