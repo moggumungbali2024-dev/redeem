@@ -25,7 +25,7 @@ CREATE TABLE rnf_settings (
 );
 
 INSERT INTO rnf_settings (id, "splashLogo") 
-VALUES ('default', '/api/logo.jpg')
+VALUES ('default', '/favicon.png')
 ON CONFLICT (id) DO NOTHING;
 
 -- ==========================================
@@ -68,11 +68,12 @@ CREATE TABLE rnf_partners (
   tier TEXT DEFAULT 'basic',
   "isAdFeatured" BOOLEAN DEFAULT false,
   "adBannerUrl" TEXT,
-  "adText" JSONB
+  "adText" JSONB,
+  banner TEXT
 );
 
 -- Seed Initial Partners
-INSERT INTO rnf_partners (id, name, "categoryId", distance, eta, description, logo, instagram, whatsapp, website, bestsellers, coupons, images, tier, "isAdFeatured", "adBannerUrl", "adText") VALUES
+INSERT INTO rnf_partners (id, name, "categoryId", distance, eta, description, logo, instagram, whatsapp, website, bestsellers, coupons, images, latitude, longitude, tier, "isAdFeatured", "adBannerUrl", "adText", banner) VALUES
 (
   'p1',
   'Lima Bay',
@@ -87,10 +88,13 @@ INSERT INTO rnf_partners (id, name, "categoryId", distance, eta, description, lo
   '[{"name": {"ko": "브런치 플래터", "en": "Brunch Platter", "id": "Platter Brunch"}, "price": "85K IDR", "image": "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=200&q=80"}, {"name": {"ko": "아이스 라떼", "en": "Iced Latte", "id": "Es Latte"}, "price": "45K IDR", "image": "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&w=200&q=80"}]'::jsonb,
   '[{"id": "c1", "type": "free", "title": {"ko": "전체 메뉴 10% 할인", "en": "10% off all menu", "id": "Diskon 10% semua menu"}, "code": "MOGGU-LIMA"}, {"id": "c1-redeem", "cost": 500, "type": "redeem", "title": {"ko": "무료 음료 교환권", "en": "Free Drink Voucher", "id": "Voucher Minuman Gratis"}, "code": "LIMA-FREE-DRINK"}]'::jsonb,
   '["https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=400&q=80", "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80"]'::jsonb,
+  -8.6478,
+  115.1385,
   'vip',
   true,
   'https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80',
-  '{"ko": "🔥 이번 주말 리마 베이에서 선셋 풀 파티! 앱 회원 무료 웰컴 칵테일 증정!", "en": "🔥 Sunset Pool Party at Lima Bay this weekend! Free Welcome Cocktails for App Members!", "id": "🔥 Sunset Pool Party di Lima Bay akhir pekan ini! Koktail Selamat Datang Gratis untuk Anggota!"}'::jsonb
+  '{"ko": "🔥 이번 주말 리마 베이에서 선셋 풀 파티! 앱 회원 무료 웰컴 칵테일 증정!", "en": "🔥 Sunset Pool Party at Lima Bay this weekend! Free Welcome Cocktails for App Members!", "id": "🔥 Sunset Pool Party di Lima Bay akhir pekan ini! Koktail Selamat Datang Gratis untuk Anggota!"}'::jsonb,
+  'https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80'
 ),
 (
   'p2',
@@ -106,10 +110,13 @@ INSERT INTO rnf_partners (id, name, "categoryId", distance, eta, description, lo
   '[{"name": {"ko": "시그니처 커피", "en": "Signature Coffee", "id": "Kopi Khas"}, "price": "50K IDR", "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=200&q=80"}]'::jsonb,
   '[{"id": "c2", "type": "free", "title": {"ko": "음료 주문 시 쿠키 증정", "en": "Free cookie with drink", "id": "Kue gratis dengan minuman"}, "code": "MOGGU-WORD"}, {"id": "c2-redeem", "cost": 1200, "type": "redeem", "title": {"ko": "무료 디저트 세트", "en": "Free Dessert Set", "id": "Set Makanan Penutup Gratis"}, "code": "WORD-DESSERT"}]'::jsonb,
   '["https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80"]'::jsonb,
+  -8.6505,
+  115.1309,
   'premium',
   false,
   NULL,
-  NULL
+  NULL,
+  'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80'
 ),
 (
   'p3',
@@ -125,10 +132,13 @@ INSERT INTO rnf_partners (id, name, "categoryId", distance, eta, description, lo
   '[{"name": {"ko": "누드볼 (Nude Bowl)", "en": "Nude Bowl", "id": "Nude Bowl"}, "price": "70K IDR", "image": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&q=80"}]'::jsonb,
   '[{"id": "c3", "type": "free", "title": {"ko": "식사 10% 할인", "en": "10% off meals", "id": "Diskon 10% untuk makanan"}, "code": "MOGGU-NUDE"}]'::jsonb,
   '["https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=400&q=80"]'::jsonb,
+  -8.6550,
+  115.1432,
   'basic',
   false,
   NULL,
-  NULL
+  NULL,
+  'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=800&q=80'
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -208,10 +218,11 @@ CREATE TABLE rnf_users (
   "lastBirthdayRewardYear" INTEGER,
   "lastDailyClaimDate" TEXT,
   "contactRequests" JSONB DEFAULT '[]'::jsonb,
-  "claimedVipBenefits" JSONB DEFAULT '[]'::jsonb
+  "claimedVipBenefits" JSONB DEFAULT '[]'::jsonb,
+  password TEXT
 );
 
-INSERT INTO rnf_users (id, name, avatar, points, "profileCompleted", "savedCoupons", email, whatsapp, instagram, dob, "pointLogs", "contactRequests") VALUES
+INSERT INTO rnf_users (id, name, avatar, points, "profileCompleted", "savedCoupons", email, whatsapp, instagram, dob, "pointLogs", "contactRequests", password) VALUES
 (
   'u1',
   'Explorer',
@@ -224,7 +235,8 @@ INSERT INTO rnf_users (id, name, avatar, points, "profileCompleted", "savedCoupo
   'explorer_bali',
   '1997-07-14',
   '[{"id": "l1", "title": {"ko": "무료 맥주 쿠폰 교환", "en": "Redeemed Coupon: Free Beer", "id": "Penukaran Kupon: Bir Gratis"}, "points": -1000, "timestamp": 1784320000000, "partnerName": "Lima Bay", "couponCode": "LIMABEER"}, {"id": "l5", "title": {"ko": "🎁 [프로모션] 신규 가입 웰컴 음료 쿠폰 획득", "en": "🎁 [Promo] New Registration Free Welcome Drink", "id": "🎁 [Promo] Kupon Minuman Selamat Datang Registrasi Baru"}, "points": 0, "timestamp": 1784100000000, "partnerName": "redeem-n.fun", "isPromo": true}]'::jsonb,
-  '[]'::jsonb
+  '[]'::jsonb,
+  '123456'
 ),
 (
   'u2',
@@ -238,7 +250,8 @@ INSERT INTO rnf_users (id, name, avatar, points, "profileCompleted", "savedCoupo
   'nikki_bali',
   '1998-05-12',
   '[]'::jsonb,
-  '[]'::jsonb
+  '[]'::jsonb,
+  '123456'
 ),
 (
   'u3',
@@ -250,9 +263,10 @@ INSERT INTO rnf_users (id, name, avatar, points, "profileCompleted", "savedCoupo
   'jiwon@naver.com',
   '+821012345678',
   'jiwon_bali',
-  '1995-11-23',
+  '1995-11-20',
   '[]'::jsonb,
-  '[]'::jsonb
+  '[]'::jsonb,
+  '123456'
 )
 ON CONFLICT (id) DO NOTHING;
 

@@ -40,6 +40,7 @@ export interface Partner {
   isAdFeatured?: boolean;
   adBannerUrl?: string;
   adText?: LocalizedString;
+  banner?: string;
 }
 
 export interface AppEvent {
@@ -89,6 +90,7 @@ export interface User {
   lastDailyClaimDate?: string; // YYYY-MM-DD
   contactRequests?: ContactRequest[]; // Incoming requests to share WhatsApp contact info
   claimedVipBenefits?: string[]; // VIP Partner IDs where visit benefit was claimed
+  password?: string;
 }
 
 export interface Redemption {

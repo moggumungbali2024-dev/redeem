@@ -410,6 +410,7 @@ function PartnerForm({ initialData, onSave, categories }: { initialData: any, on
       name: '',
       categoryId: categories[0]?.id || '',
       logo: '',
+      banner: '',
       description: { ko: '', en: '', id: '' },
       distance: 0,
       eta: 0,

@@ -1,6 +1,24 @@
 import { Partner, Category, AppSettings, ClickData, User, AppEvent, Faq, Activity, Redemption } from './types';
 
 export const api = {
+
+  login: async (whatsapp: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ whatsapp, password })
+    });
+    return res.json();
+  },
+  register: async (whatsapp: string, password: string, name: string, email: string): Promise<{ success: boolean; user?: User; error?: string }> => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ whatsapp, password, name, email })
+    });
+    return res.json();
+  },
+
   getSettings: async (): Promise<AppSettings> => {
     const res = await fetch('/api/settings');
     return res.json();
@@ -71,21 +89,24 @@ export const api = {
     return res.json();
   },
   getUser: async (): Promise<User> => {
-    const res = await fetch('/api/user');
+    const userId = localStorage.getItem('userId') || 'u1';
+    const res = await fetch(`/api/user?userId=${userId}`);
     return res.json();
   },
   updateUser: async (user: Partial<User>): Promise<User> => {
     const res = await fetch('/api/user', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(user),
+      body: JSON.stringify({ ...user, userId: localStorage.getItem('userId') || 'u1' }),
     });
     return res.json();
   },
   claimDailyMission: async (): Promise<{ success: boolean; user: User }> => {
+    const userId = localStorage.getItem('userId') || 'u1';
     const res = await fetch('/api/user/claim_daily', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
     });
     return res.json();
   },
@@ -93,7 +114,7 @@ export const api = {
     const res = await fetch('/api/user/request_contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ targetUserId })
+      body: JSON.stringify({ targetUserId, userId: localStorage.getItem('userId') || 'u1' })
     });
     return res.json();
   },
@@ -101,7 +122,7 @@ export const api = {
     const res = await fetch('/api/user/respond_contact_request', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requestId, status })
+      body: JSON.stringify({ requestId, status, userId: localStorage.getItem('userId') || 'u1' })
     });
     return res.json();
   },
@@ -109,7 +130,7 @@ export const api = {
     const res = await fetch('/api/user/save_coupon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ couponId }),
+      body: JSON.stringify({ couponId, userId: localStorage.getItem('userId') || 'u1' }),
     });
     return res.json();
   },
@@ -117,7 +138,7 @@ export const api = {
     const res = await fetch('/api/user/redeem_coupon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ couponId, cost }),
+      body: JSON.stringify({ couponId, cost, userId: localStorage.getItem('userId') || 'u1' }),
     });
     return res.json();
   },
@@ -204,7 +225,7 @@ export const api = {
     const res = await fetch('/api/user/claim_vip_visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partnerId })
+      body: JSON.stringify({ partnerId, userId: localStorage.getItem('userId') || 'u1' })
     });
     return res.json();
   },

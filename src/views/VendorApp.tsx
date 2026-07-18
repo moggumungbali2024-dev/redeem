@@ -94,6 +94,7 @@ export default function VendorApp() {
   // Editing profile state
   const [vendorName, setVendorName] = useState('');
   const [vendorLogo, setVendorLogo] = useState('');
+  const [vendorBanner, setVendorBanner] = useState('');
   const [vendorDescriptionKo, setVendorDescriptionKo] = useState('');
   const [vendorDescriptionEn, setVendorDescriptionEn] = useState('');
   const [vendorDescriptionId, setVendorDescriptionId] = useState('');
@@ -294,9 +295,21 @@ export default function VendorApp() {
         }
       }
 
+      
+      let finalBanner = vendorBanner;
+      if (vendorBanner && vendorBanner.startsWith('data:')) {
+        try {
+          finalBanner = await uploadImage(vendorBanner, `vendors/banner_${selectedVendorId}`);
+        } catch (err) {
+          console.error("Banner upload failed:", err);
+        }
+      }
+
       await api.updatePartner(selectedVendorId, {
         name: vendorName,
         logo: finalLogo,
+        banner: finalBanner,
+
         eta: Number(vendorEta),
         distance: Number(vendorDistance),
         instagram: vendorInstagram,

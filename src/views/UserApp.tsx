@@ -10,10 +10,24 @@ import { useI18n, Language } from '../i18n';
 import ProfileWizard from './ProfileWizard';
 import PointAnimation from '../components/PointAnimation';
 import { uploadImage } from '../supabase';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix leaflet default icon issue
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
 
 export default function UserApp() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem("userId"));
   const [user, setUser] = useState<User | null>(null);
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -145,6 +159,7 @@ export default function UserApp() {
           if(newUser) setUser(newUser);
         }} />} />
         <Route path="/faq" element={<FaqView />} />
+        <Route path="/notifications" element={<NotificationsView user={user} />} />
       </Routes>
     </div>
   );
@@ -153,6 +168,157 @@ export default function UserApp() {
 
 
 // --- Profile Edit Modal ---
+
+function LoginView({ onLogin, onGoRegister }: { onLogin: (u: User) => void, onGoRegister: () => void }) {
+  const [whatsapp, setWhatsapp] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await api.login(whatsapp, password);
+      if (res.success && res.user) {
+        onLogin(res.user);
+      } else {
+        alert(res.error || "Login failed");
+      }
+    } catch (err) {
+      alert("Error logging in");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-indigo-50 to-white">
+      <div className="w-full max-w-sm p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+        <div className="flex justify-center mb-6">
+          <img src="/favicon.png" alt="Logo" className="w-20 h-20 rounded-2xl shadow-lg" />
+        </div>
+        <h2 className="text-2xl font-bold text-center text-slate-800 mb-8 tracking-tight">Welcome Back</h2>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp Number</label>
+            <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required placeholder="+628123456789" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <button type="submit" disabled={loading} className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 mt-2 shadow-md">
+            {loading ? "Logging in..." : "Log In"}
+          </button>
+        </form>
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Don't have an account?{' '}
+          <button onClick={onGoRegister} className="text-indigo-600 font-medium hover:text-indigo-500 transition-colors">
+            Register here
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RegisterView({ onRegister, onGoLogin }: { onRegister: (u: User) => void, onGoLogin: () => void }) {
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [whatsapp, setWhatsapp] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await api.register(whatsapp, password, name, email);
+      if (res.success && res.user) {
+        onRegister(res.user);
+      } else {
+        alert(res.error || "Registration failed");
+      }
+    } catch (err) {
+      alert("Error registering");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-indigo-50 to-white">
+      <div className="w-full max-w-sm p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
+        <div className="flex justify-center mb-6">
+          <img src="/favicon.png" alt="Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+        </div>
+        <h2 className="text-2xl font-bold text-center text-slate-800 mb-8 tracking-tight">Create Account</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Doe" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="john@example.com" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp Number</label>
+            <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required placeholder="+628123456789" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+          </div>
+          <button type="submit" disabled={loading} className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 mt-4 shadow-md">
+            {loading ? "Registering..." : "Sign Up"}
+          </button>
+        </form>
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Already have an account?{' '}
+          <button onClick={onGoLogin} className="text-indigo-600 font-medium hover:text-indigo-500 transition-colors">
+            Log in here
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function NotificationsView({ user }: { user: User }) {
+  const navigate = useNavigate();
+  return (
+    <div className="pb-24 pt-4 px-4 bg-slate-50 min-h-screen">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl hover:bg-black/5 active:bg-black/10 transition-colors">
+          <ChevronLeft className="w-6 h-6 text-slate-700" />
+        </button>
+        <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Notifications</h2>
+      </div>
+      <div className="space-y-3">
+        {user.pointLogs && user.pointLogs.length > 0 ? user.pointLogs.map((log: any) => (
+          <div key={log.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-start gap-4">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${log.points > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+              {log.points > 0 ? <Plus className="w-5 h-5" /> : <Minus className="w-5 h-5" />}
+            </div>
+            <div>
+              <p className="font-medium text-slate-800 text-sm leading-tight mb-1">{log.title.ko}</p>
+              <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleDateString()}</p>
+            </div>
+            {log.points !== 0 && (
+              <div className={`ml-auto font-semibold ${log.points > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {log.points > 0 ? '+' : ''}{log.points}
+              </div>
+            )}
+          </div>
+        )) : (
+          <div className="text-center text-slate-500 py-12">No notifications yet.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProfileModal({ user, onClose, onSave }: { user: User, onClose: () => void, onSave: (u: User) => void }) {
   const [name, setName] = useState(user.name);
   const [avatar, setAvatar] = useState(user.avatar);
@@ -631,7 +797,11 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
                   }}
                   className="relative min-w-full md:min-w-[480px] h-28 border-[3px] border-black rounded-[20px] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-stone-900 cursor-pointer active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all snap-center shrink-0 flex flex-col justify-end"
                 >
-                  <img src={ad.adBannerUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" alt="VIP Ad" />
+                  {(ad.adBannerUrl || '').endsWith('.mp4') ? (
+                    <video src={ad.adBannerUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
+                  ) : (
+                    <img src={ad.adBannerUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" alt="VIP Ad" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent flex items-center p-4">
                     <div className="flex gap-3.5 items-center w-4/5">
                       <img src={ad.logo} className="w-12 h-12 rounded-xl border-2 border-black object-cover shrink-0 shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white" alt="logo" />
@@ -1084,9 +1254,13 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex flex-col h-full bg-[#FFF8F0] relative overflow-y-auto">
       {pointAnim && <PointAnimation amount={pointAnim.amount} type={pointAnim.type} onComplete={() => setPointAnim(null)} />}
       
-      {/* Header Image */}
-      <div className="relative h-48 md:h-64 w-full border-b-[3px] border-black max-w-[600px] mx-auto shrink-0">
-        <img src={partner.images[0] || partner.logo} className="w-full h-full object-cover" alt="header" />
+      {/* Header Image / Video */}
+      <div className="relative h-48 md:h-64 w-full border-b-[3px] border-black max-w-[600px] mx-auto shrink-0 bg-stone-900">
+        {(partner.banner || partner.images[0] || partner.logo || '').endsWith('.mp4') ? (
+          <video src={partner.banner || partner.images[0] || partner.logo} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+        ) : (
+          <img src={partner.banner || partner.images[0] || partner.logo} className="w-full h-full object-cover" alt="header" />
+        )}
         <button onClick={() => navigate(-1)} className="absolute top-4 left-4 p-2.5 bg-white border-[3px] border-black rounded-full text-black shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none transition-all z-20">
           <ArrowLeft size={20} strokeWidth={3} />
         </button>
@@ -1095,35 +1269,41 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
       <div className="p-4 bg-[#FFF8F0] flex-1 flex flex-col gap-4 w-full max-w-[600px] mx-auto pb-12">
         {/* Info Header */}
         <div className="bg-white p-4 border-[3px] border-black rounded-[24px] shadow-[3px_3px_0px_rgba(0,0,0,1)]">
-          <div className="flex justify-between items-start gap-2 mb-2">
-            <h1 className="text-2xl md:text-3xl font-black text-black uppercase leading-tight">{partner.name}</h1>
-            <div className="flex items-center gap-1 text-[#FDD835] font-black shrink-0 text-sm">
-              <Star size={16} fill="#FDD835" stroke="black" strokeWidth={2.5} />
-              <span className="text-black">4.8</span>
-            </div>
-          </div>
           
-          <div className="flex gap-2 items-center mb-3">
-            {/* Clickable Location Badge */}
-            <button 
-              onClick={() => handleLink('maps', partner.googleMapsUrl || '')}
-              className="flex items-center gap-1.5 text-xs font-black text-[#1E88E5] bg-stone-50 hover:bg-stone-100 border-2 border-black px-2.5 py-1.5 rounded-xl shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none transition-all"
-              title="Open in Google Maps"
-            >
-              <MapPin size={14} strokeWidth={3} /> {partner.distance}km ({partner.eta}m)
-            </button>
-            
-            {!checkInTime && (
-              <button onClick={handleCheckIn} className="flex-1 bg-[#FDD835] hover:bg-[#FBC02D] border-2 border-black py-1.5 rounded-xl font-black text-xs md:text-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none transition-all uppercase whitespace-nowrap">
-                {t({ ko: "체크인", en: "Check In", id: "Check-In" })}
-              </button>
-            )}
-            {checkInTime && (
-              <div className="flex-1 bg-[#43A047] text-white border-2 border-black py-1.5 rounded-xl font-black text-xs md:text-sm shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase text-center flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                {t({ ko: "체크인 완료 (+50P)", en: "Checked In (+50P)", id: "Sudah Check-In (+50P)" })}
+          <div className="flex items-start gap-3 mb-3">
+            <img src={partner.logo} alt="logo" className="w-16 h-16 rounded-2xl border-[3px] border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] object-cover bg-white shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-start gap-2">
+                <h1 className="text-xl md:text-2xl font-black text-black uppercase leading-tight line-clamp-2">{partner.name}</h1>
+                <div className="flex items-center gap-1 text-[#FDD835] font-black shrink-0 text-sm">
+                  <Star size={16} fill="#FDD835" stroke="black" strokeWidth={2.5} />
+                  <span className="text-black">4.8</span>
+                </div>
               </div>
-            )}
+              
+              <div className="flex gap-2 items-center mt-2">
+                {/* Clickable Location Badge */}
+                <button 
+                  onClick={() => handleLink('maps', partner.googleMapsUrl || '')}
+                  className="flex items-center gap-1.5 text-xs font-black text-[#1E88E5] bg-stone-50 hover:bg-stone-100 border-2 border-black px-2.5 py-1 rounded-xl shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none transition-all shrink-0"
+                  title="Open in Google Maps"
+                >
+                  <MapPin size={12} strokeWidth={3} /> {partner.distance}km ({partner.eta}m)
+                </button>
+                
+                {!checkInTime && (
+                  <button onClick={handleCheckIn} className="flex-1 bg-[#FDD835] hover:bg-[#FBC02D] border-2 border-black py-1 rounded-xl font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none transition-all uppercase whitespace-nowrap min-w-[70px]">
+                    {t({ ko: "체크인", en: "Check In", id: "Check-In" })}
+                  </button>
+                )}
+                {checkInTime && (
+                  <div className="flex-1 bg-[#43A047] text-white border-2 border-black py-1 rounded-xl font-black text-xs shadow-[2px_2px_0px_rgba(0,0,0,1)] uppercase text-center flex items-center justify-center gap-1.5 whitespace-nowrap min-w-[70px]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    {t({ ko: "완료", en: "Done", id: "Selesai" })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <p className="text-xs md:text-sm font-semibold text-stone-600 leading-relaxed border-t-2 border-dashed border-stone-200 pt-3">
@@ -1380,306 +1560,133 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
 }
 
 // --- Map View ---
+
+// --- Map View ---
 function MapView({ partners, user, categories }: { partners: Partner[], user: User, categories: Category[] }) {
   const navigate = useNavigate();
   const { t } = useI18n();
-  const constraintsRef = useRef(null);
 
-  // States for search, category filter, and selected partner drawer
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCats, setSelectedCats] = useState<string[]>(['eat', 'nightlife', 'stay', 'wellness']);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
 
-  // Toggle category filters
   const toggleCategory = (id: string) => {
     setSelectedCats(prev => {
-      if (prev.includes(id)) {
-        // Prevent deselecting all to avoid empty state, or just let them deselect
-        return prev.filter(cId => cId !== id);
-      } else {
-        return [...prev, id];
-      }
+      if (prev.includes(id)) return prev.filter(cId => cId !== id);
+      return [...prev, id];
     });
   };
 
-  // Helper to get category icon
   const getCategoryIcon = (iconName: string, size = 18) => {
     switch (iconName) {
-      case 'Utensils':
-        return <Utensils size={size} strokeWidth={2.5} />;
-      case 'Moon':
-        return <Moon size={size} strokeWidth={2.5} />;
-      case 'Bed':
-        return <Bed size={size} strokeWidth={2.5} />;
-      case 'Heart':
-        return <Heart size={size} strokeWidth={2.5} />;
-      default:
-        return <MapPin size={size} strokeWidth={2.5} />;
+      case 'Utensils': return <Utensils size={size} strokeWidth={2.5} />;
+      case 'Moon': return <Moon size={size} strokeWidth={2.5} />;
+      case 'Bed': return <Bed size={size} strokeWidth={2.5} />;
+      case 'Heart': return <Heart size={size} strokeWidth={2.5} />;
+      default: return <MapPin size={size} strokeWidth={2.5} />;
     }
   };
 
-  // Filter partners based on selected category pills and search keyword
   const filteredPartners = partners.filter(p => {
-    const matchesCategory = selectedCats.includes(p.categoryId);
-    if (!matchesCategory) return false;
-
+    if (!p.latitude || !p.longitude) return false;
+    if (!selectedCats.includes(p.categoryId)) return false;
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    const nameMatches = p.name.toLowerCase().includes(query);
-    const descKoMatches = p.description?.ko?.toLowerCase().includes(query) || false;
-    const descEnMatches = p.description?.en?.toLowerCase().includes(query) || false;
-    const descIdMatches = p.description?.id?.toLowerCase().includes(query) || false;
-
-    return nameMatches || descKoMatches || descEnMatches || descIdMatches;
+    return p.name.toLowerCase().includes(query) || 
+           (p.description?.ko?.toLowerCase().includes(query)) ||
+           (p.description?.en?.toLowerCase().includes(query)) ||
+           (p.description?.id?.toLowerCase().includes(query));
   });
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-[#E3F2FD] overflow-hidden" ref={constraintsRef}>
-      
-      {/* Floating Top Header Section */}
-      <div className="absolute top-4 left-4 right-4 z-50 flex flex-col gap-3 pointer-events-none">
-        
-        {/* Navigation & Search Row */}
+    <div className="fixed inset-0 z-40 flex flex-col bg-[#E3F2FD] overflow-hidden">
+      <div className="absolute top-4 left-4 right-4 z-[999] flex flex-col gap-3 pointer-events-none">
         <div className="flex gap-2 items-center w-full pointer-events-auto">
-          {/* Back Button */}
-          <button 
-            onClick={() => navigate(-1)} 
-            className="p-3 bg-white border-4 border-black rounded-full text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all flex-shrink-0"
-          >
+          <button onClick={() => navigate(-1)} className="p-3 bg-white border-4 border-black rounded-full text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all flex-shrink-0">
             <ArrowLeft size={22} strokeWidth={3} />
           </button>
-
-          {/* Search Bar - styled with bold Bauhaus neobrutalist borders */}
           <div className="flex-1 flex items-center bg-white border-4 border-black rounded-full px-4 py-2.5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative gap-2">
             <Search size={20} className="text-black/70 flex-shrink-0" strokeWidth={2.5} />
             <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t({ ko: "장소 또는 이벤트 검색...", en: "Search spots or events...", id: "Cari tempat atau acara..." }) as string}
+              type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t({ ko: "장소 검색...", en: "Search spots...", id: "Cari tempat..." }) as string}
               className="w-full bg-transparent border-none outline-none font-bold text-sm text-black placeholder-black/50"
             />
             {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="p-1 hover:bg-black/10 rounded-full transition-colors"
-              >
+              <button onClick={() => setSearchQuery('')} className="p-1 hover:bg-black/10 rounded-full transition-colors">
                 <X size={16} className="text-black" strokeWidth={3} />
               </button>
             )}
           </div>
-
-          {/* Points/Star Badge */}
           <div className="bg-[#FDD835] border-4 border-black px-3.5 py-2.5 rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black flex items-center gap-1.5 text-black text-sm flex-shrink-0">
             <Star className="text-black fill-black" size={18} /> 
             <span>{(user.points/1000).toFixed(1)}k</span>
           </div>
         </div>
 
-        {/* Horizontal Category Toggle Bar */}
         <div className="flex gap-2 overflow-x-auto py-1 scrollbar-none pointer-events-auto px-1 -mx-1 mask-linear-r">
           {categories.map((c) => {
             const isActive = selectedCats.includes(c.id);
-            const badgeColor = c.color || 'bg-white';
-            
             return (
               <button
-                key={c.id}
-                onClick={() => toggleCategory(c.id)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-full border-4 border-black font-black text-xs uppercase tracking-tight transition-all flex-shrink-0 active:scale-95",
-                  isActive 
-                    ? `${badgeColor} text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]` 
-                    : "bg-white/80 text-black/50 border-black/40 shadow-none scale-98"
-                )}
+                key={c.id} onClick={() => toggleCategory(c.id)}
+                className={cn("flex items-center gap-2 px-4 py-2 rounded-full border-4 border-black font-black text-xs uppercase tracking-tight transition-all flex-shrink-0 active:scale-95", isActive ? `${c.color} text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]` : "bg-white/80 text-black/50 border-black/40 shadow-none")}
               >
-                <span className={cn("transition-colors", isActive ? "text-black" : "text-black/40")}>
-                  {getCategoryIcon(c.icon, 16)}
-                </span>
+                <span className={cn("transition-colors", isActive ? "text-black" : "text-black/40")}>{getCategoryIcon(c.icon, 16)}</span>
                 <span>{t(c.name)}</span>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 bg-black rounded-full ml-1" />
-                )}
               </button>
             );
           })}
         </div>
-
       </div>
 
-      {/* Explore tip floating banner */}
-      <div className="absolute bottom-6 left-0 right-0 z-20 flex justify-center pointer-events-none">
-         <div className="bg-white text-black border-4 border-black px-6 py-3 rounded-full font-black text-xs md:text-sm uppercase tracking-widest shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] pointer-events-auto">
-            {t({ ko: '원하는 장소를 클릭하여 확인하세요', en: 'Click a spot to explore details', id: 'Klik tempat untuk detailnya' })}
-         </div>
+      <div className="flex-1 w-full relative z-[10] border-t-[6px] border-black">
+        <MapContainer center={[-8.6478, 115.1385]} zoom={14} style={{ height: '100%', width: '100%' }}>
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {filteredPartners.map(p => (
+            <Marker key={p.id} position={[p.latitude!, p.longitude!]} eventHandlers={{ click: () => setSelectedPartner(p) }}>
+              <Popup>
+                <div className="font-bold">{p.name}</div>
+                {p.googleMapsUrl && <a href={p.googleMapsUrl} target="_blank" className="text-blue-500 underline text-xs">Open in Maps</a>}
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
       </div>
 
-      {/* Draggable Map Canvas */}
-      <motion.div 
-        drag 
-        dragConstraints={constraintsRef}
-        dragElastic={0.2}
-        className="w-[1200px] h-[1200px] bg-[#BBDEFB] relative cursor-grab active:cursor-grabbing"
-        initial={{ x: -400, y: -400 }}
-        style={{ backgroundImage: 'radial-gradient(#90CAF9 4px, transparent 4px)', backgroundSize: '40px 40px' }}
-        onClick={() => setSelectedPartner(null)} // Clear drawer selection when tapping background map canvas
-      >
-        {/* Stylized Game Islands */}
-        <div className="absolute top-[20%] left-[20%] w-[60%] h-[60%] bg-[#A5D6A7] rounded-full blur-3xl opacity-60 pointer-events-none"></div>
-        <div className="absolute top-[10%] left-[60%] w-[30%] h-[30%] bg-[#FFF59D] rounded-full blur-3xl opacity-60 pointer-events-none"></div>
-        <div className="absolute top-[60%] left-[10%] w-[40%] h-[30%] bg-[#F48FB1] rounded-full blur-3xl opacity-60 pointer-events-none"></div>
-
-        {/* Central redeem-n.fun Pin */}
-        <div className="absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-           <div className="bg-white p-2 rounded-[24px] border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-3 relative z-10">
-              <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=100&q=80" className="w-16 h-16 rounded-[16px] object-cover" alt="redeem-n.fun" />
-           </div>
-           <div className="bg-black text-white text-base font-black px-5 py-2 rounded-full uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] z-20 border-2 border-white">redeem-n.fun</div>
-           {/* Pulse effect */}
-           <motion.div 
-             animate={{ scale: [1, 2.5, 1], opacity: [0.6, 0, 0.6] }}
-             transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-             className="absolute top-4 left-4 right-4 bottom-4 bg-[#E53935] rounded-full -z-10 pointer-events-none"
-           />
-        </div>
-
-        {/* Partner Pins */}
-        {filteredPartners.map((p, i) => {
-          const category = categories.find(c => c.id === p.categoryId);
-          const colorClass = category?.color || 'bg-white';
-          const isSelected = selectedPartner?.id === p.id;
-          
-          let x = 600;
-          let y = 600;
-          if (p.latitude && p.longitude) {
-            const scale = 200000;
-            x = 600 + (p.longitude - 115.1300) * scale;
-            y = 600 - (p.latitude - (-8.6500)) * scale;
-            // Bound so they stay on the visible map area
-            x = Math.max(80, Math.min(1120, x));
-            y = Math.max(80, Math.min(1120, y));
-          } else {
-            // Generate pseudo-random positions in a circle based on index and distance
-            const angle = (i * Math.PI * 2) / partners.length;
-            const radius = 180 + p.distance * 100; 
-            x = 600 + Math.cos(angle) * radius;
-            y = 600 + Math.sin(angle) * radius;
-          }
-          
-          return (
-            <motion.div 
-              key={p.id}
-              className="absolute flex flex-col items-center group cursor-pointer"
-              style={{ left: x, top: y, x: '-50%', y: '-50%' }}
-              whileHover={{ scale: 1.15, zIndex: 40 }}
-              animate={isSelected ? { scale: 1.15, zIndex: 40 } : { scale: 1, zIndex: 30 }}
-              onClick={(e) => {
-                e.stopPropagation(); // Avoid triggering map canvas onClick to deselect
-                setSelectedPartner(p);
-              }}
-            >
-              <div 
-                className={cn(
-                  "p-1.5 rounded-[24px] border-4 border-black relative overflow-hidden transition-all duration-200 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-3",
-                  isSelected ? "border-[#E53935] -translate-y-2 shadow-[8px_12px_0px_0px_rgba(0,0,0,1)]" : "group-hover:-translate-y-2 group-hover:shadow-[8px_12px_0px_0px_rgba(0,0,0,1)]",
-                  colorClass
-                )}
-              >
-                <img src={p.logo} className="w-20 h-20 rounded-[16px] object-cover bg-white" alt={p.name} />
-                <div className={cn("absolute -bottom-2 -right-2 w-10 h-10 rounded-full border-4 border-black flex items-center justify-center font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-white", colorClass.replace('bg-', 'bg-').replace('text-', 'text-').includes('bg-white') || colorClass.includes('yellow') ? 'text-black' : 'text-white', colorClass)}>
-                  {p.eta}m
-                </div>
-              </div>
-              <div className={cn(
-                "text-black text-xs font-black px-3.5 py-1.5 rounded-full border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] whitespace-nowrap uppercase transition-all duration-200", 
-                isSelected ? "opacity-100 scale-100" : "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100",
-                colorClass.includes('blue') || colorClass.includes('red') || colorClass.includes('black') ? 'text-white' : 'text-black', 
-                colorClass
-              )}>
-                {p.name}
-              </div>
-            </motion.div>
-          );
-        })}
-      </motion.div>
-
-      {/* Selected Partner Bottom Preview Drawer */}
       <AnimatePresence>
         {selectedPartner && (
           <motion.div 
-            initial={{ y: 250, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 250, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 180 }}
-            className="absolute bottom-6 left-4 right-4 md:left-1/2 md:right-auto md:w-[480px] md:-translate-x-1/2 z-50 bg-white border-4 border-black rounded-[32px] p-5 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4 pointer-events-auto"
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="absolute bottom-0 left-0 right-0 z-[1000] bg-white border-t-4 border-black rounded-t-[32px] shadow-[0_-8px_0px_rgba(0,0,0,0.1)] pb-8 pt-2 px-4"
           >
-            {/* Top row with name, logo, category, and close button */}
-            <div className="flex gap-4 items-start relative">
-              <img 
-                src={selectedPartner.logo} 
-                className="w-20 h-20 rounded-[20px] object-cover border-4 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] bg-stone-100" 
-                alt={selectedPartner.name} 
-              />
-              <div className="flex-1 min-w-0 pr-8">
-                {/* Category name tag */}
-                {(() => {
-                  const cat = categories.find(c => c.id === selectedPartner.categoryId);
-                  return cat ? (
-                    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border-2 border-black font-black text-[10px] uppercase tracking-tight mb-1 text-black", cat.color || 'bg-white')}>
-                      {getCategoryIcon(cat.icon, 10)}
-                      {t(cat.name)}
-                    </span>
-                  ) : null;
-                })()}
-
-                <h3 className="font-black text-xl text-black uppercase tracking-tight leading-none mb-1.5 truncate">
-                  {selectedPartner.name}
-                </h3>
-                
-                <div className="flex items-center gap-3 font-bold text-xs text-stone-600">
-                  <span className="flex items-center gap-1">
-                    <Clock size={14} className="text-black" /> {selectedPartner.eta} mins
-                  </span>
-                  <span className="w-1.5 h-1.5 bg-stone-400 rounded-full" />
-                  <span className="flex items-center gap-1">
-                    <MapPin size={14} className="text-black" /> {selectedPartner.distance} km
-                  </span>
+            <div className="w-12 h-2 bg-stone-300 rounded-full mx-auto mb-4 cursor-pointer" onClick={() => setSelectedPartner(null)} />
+            <div className="flex gap-4">
+              <img src={selectedPartner.logo} alt={selectedPartner.name} className="w-20 h-20 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] object-cover" />
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 mb-1">{t(categories.find(c => c.id === selectedPartner.categoryId)?.name || {ko:'',en:'',id:''})}</span>
+                <h3 className="font-black text-2xl uppercase text-black leading-none truncate">{selectedPartner.name}</h3>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 border-2 border-green-700 font-bold text-xs rounded-full">{selectedPartner.distance}km</span>
                 </div>
               </div>
-
-              {/* Close Button */}
-              <button 
-                onClick={() => setSelectedPartner(null)}
-                className="absolute top-0 right-0 p-1.5 bg-white border-2 border-black rounded-full text-black hover:bg-stone-100 transition-all active:scale-90"
-              >
-                <X size={16} strokeWidth={3} />
-              </button>
             </div>
-
-            {/* Description */}
-            {selectedPartner.description && (
-              <p className="text-stone-700 font-bold text-xs leading-relaxed line-clamp-2">
-                {t(selectedPartner.description)}
-              </p>
-            )}
-
-            {/* Actions button */}
-            <div className="flex gap-2 w-full mt-1">
-              <button
-                onClick={() => navigate(`/partner/${selectedPartner.id}`)}
-                className="flex-1 py-3 bg-[#E53935] text-white border-4 border-black rounded-[18px] font-black shadow-[4px_4px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase tracking-wider text-xs text-center flex items-center justify-center gap-1.5"
-              >
-                <span>{t({ ko: "상세 정보 & 혜택 보기", en: "View Info & Offers", id: "Lihat Info & Penawaran" })}</span>
-                <ArrowRight size={14} strokeWidth={3} />
-              </button>
-            </div>
+            <p className="mt-4 text-sm font-bold text-stone-600 line-clamp-2">{t(selectedPartner.description)}</p>
+            <button 
+              onClick={() => navigate(`/partner/${selectedPartner.id}`)}
+              className="mt-5 w-full py-4 bg-[#1E88E5] border-4 border-black text-white font-black uppercase tracking-widest text-lg rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all"
+            >
+              View Details
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-
 // --- Wallet View ---
 function WalletView({ user, partners }: { user: User, partners: Partner[] }) {
   const navigate = useNavigate();
@@ -2077,6 +2084,7 @@ function ProfileView({ user, updateUser }: { user: User, updateUser: (updates: P
   const [avatar, setAvatar] = useState(user.avatar);
   const [whatsapp, setWhatsapp] = useState(user.whatsapp || '');
   const [instagram, setInstagram] = useState(user.instagram || '');
+  const [password, setPassword] = useState('');
   const [dob, setDob] = useState(user.dob || '');
   const [subscribed, setSubscribed] = useState(user.subscribedToNotifications !== false);
 
@@ -2111,11 +2119,17 @@ function ProfileView({ user, updateUser }: { user: User, updateUser: (updates: P
       avatar: finalAvatar,
       whatsapp, 
       instagram, 
+      password: password ? password : user.password,
       dob,
       subscribedToNotifications: subscribed 
     });
     alert('Profile updated!');
     navigate(-1);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userId");
+    window.location.reload();
   };
 
   return (
@@ -2200,6 +2214,14 @@ function ProfileView({ user, updateUser }: { user: User, updateUser: (updates: P
             />
           </div>
 
+          <div className="flex flex-col gap-2">
+            <label className="font-black text-sm uppercase">Change Password</label>
+            <input 
+              type="password" placeholder="Leave empty to keep current" value={password} onChange={e => setPassword(e.target.value)} 
+              className="border-4 border-black rounded-xl p-4 font-bold bg-white text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]" 
+            />
+          </div>
+
           {/* Simulated Push Notification Toggle */}
           <div className="flex items-center justify-between bg-white border-4 border-black rounded-xl p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <div className="flex items-center gap-3">
@@ -2230,6 +2252,10 @@ function ProfileView({ user, updateUser }: { user: User, updateUser: (updates: P
 
           <button type="submit" className="w-full bg-[#43A047] text-white border-4 border-black py-4 rounded-xl font-black text-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all mt-4 uppercase">
             Save Changes
+          </button>
+
+          <button type="button" onClick={handleLogout} className="w-full bg-black text-white border-4 border-black py-4 rounded-xl font-black text-xl flex items-center justify-center gap-2 active:scale-95 transition-all uppercase">
+            <LogOut size={24} /> Logout
           </button>
         </form>
       </div>
@@ -2482,7 +2508,11 @@ export function EventDetail({ events }) {
 
       <div className="p-4 max-w-[600px] mx-auto w-full flex flex-col gap-5">
         <div className="relative w-full aspect-video border-4 border-black rounded-[32px] overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,1)] bg-white">
-          <img src={event.image} className="w-full h-full object-cover" alt="Event Banner" />
+          {(event.image || '').endsWith('.mp4') ? (
+            <video src={event.image} className="w-full h-full object-cover" autoPlay loop muted playsInline />
+          ) : (
+            <img src={event.image} className="w-full h-full object-cover" alt="Event Banner" />
+          )}
           <div className="absolute top-4 left-4 bg-[#E53935] text-white text-xs font-black uppercase px-3 py-1.5 rounded-full border-2 border-white shadow-lg">
             {event.date}
           </div>

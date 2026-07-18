@@ -7,7 +7,7 @@ import { Partner, Category, AppSettings } from "./src/types";
 
 // In-memory DB
 let settings: AppSettings = {
-  splashLogo: "/api/logo.jpg"
+  splashLogo: "/favicon.png"
 };
 
 let categories: Category[] = [
@@ -45,6 +45,9 @@ let partners: Partner[] = [
       "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=400&q=80",
       "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6478,
+    longitude: 115.1385,
+    banner: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80",
     tier: "vip",
     isAdFeatured: true,
     adBannerUrl: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=800&q=80",
@@ -79,6 +82,9 @@ let partners: Partner[] = [
     images: [
       "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6505,
+    longitude: 115.1309,
+    banner: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80",
     tier: "premium"
   },
   {
@@ -106,6 +112,9 @@ let partners: Partner[] = [
     images: [
       "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6550,
+    longitude: 115.1432,
+    banner: "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&w=800&q=80",
     tier: "basic"
   },
   {
@@ -132,6 +141,9 @@ let partners: Partner[] = [
     images: [
       "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6490,
+    longitude: 115.1400,
+    banner: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=800&q=80",
     tier: "basic"
   },
   {
@@ -158,6 +170,9 @@ let partners: Partner[] = [
     images: [
       "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6420,
+    longitude: 115.1450,
+    banner: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80",
     tier: "premium"
   },
   {
@@ -184,6 +199,9 @@ let partners: Partner[] = [
     images: [
       "https://images.unsplash.com/photo-1497215898120-1d00cb81529d?auto=format&fit=crop&w=400&q=80"
     ],
+    latitude: -8.6515,
+    longitude: 115.1325,
+    banner: "https://images.unsplash.com/photo-1497215898120-1d00cb81529d?auto=format&fit=crop&w=800&q=80",
     tier: "vip",
     isAdFeatured: true,
     adBannerUrl: "https://images.unsplash.com/photo-1497215898120-1d00cb81529d?auto=format&fit=crop&w=800&q=80",
@@ -636,8 +654,8 @@ async function startServer() {
     res.json({ success: true, message: "Database reset to factory defaults." });
   });
 
-  app.get("/api/logo.jpg", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "src/assets/images/app_logo_1784356024934.jpg"));
+  app.get("/favicon.png", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public/favicon.png"));
   });
 
   app.get("/api/settings", (req, res) => {
@@ -732,13 +750,55 @@ async function startServer() {
     res.json(clicks);
   });
 
+  // Auth
+
+  app.post("/api/auth/register", async (req, res) => {
+    const { whatsapp, password, name, email } = req.body;
+    const existing = users.find(u => u.whatsapp === whatsapp);
+    if (existing) {
+      return res.status(400).json({ error: "WhatsApp already registered" });
+    }
+    const newUser = {
+      id: "u" + Date.now(),
+      name: name || "New User",
+      avatar: "https://i.pravatar.cc/150?img=" + Math.floor(Math.random() * 70),
+      points: 0,
+      profileCompleted: false,
+      savedCoupons: [],
+      email: email || "",
+      whatsapp,
+      password,
+      instagram: "",
+      dob: "",
+      contactRequests: [],
+      pointLogs: []
+    };
+    users.push(newUser);
+    await dbUpsert('rnf_users', newUser);
+    res.json({ success: true, user: newUser });
+  });
+
+  app.post("/api/auth/login", (req, res) => {
+    const { whatsapp, password } = req.body;
+    const user = users.find(u => u.whatsapp === whatsapp && u.password === password);
+    if (user) {
+      res.json({ success: true, user });
+    } else {
+      res.status(401).json({ error: "Invalid credentials" });
+    }
+  });
+
   // User Profile
   app.get("/api/user", (req, res) => {
-    res.json(users[0]);
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    const userIndex = users.findIndex(u => u.id === currentUser.id);
+    res.json(currentUser);
   });
 
   app.put("/api/user", async (req, res) => {
-    const oldPoints = users[0].points;
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    const userIndex = users.findIndex(u => u.id === currentUser.id);
+    const oldPoints = currentUser.points;
     const newPoints = req.body.points;
     
     if (newPoints !== undefined && newPoints !== oldPoints) {
@@ -748,13 +808,13 @@ async function startServer() {
        
        if (diff === 50) {
          title = { ko: "가맹점 체크인 보상", en: "Partner Check-in Reward", id: "Hadiah Check-in Mitra" };
-         const pId = req.body.checkedInAt?.partnerId || users[0].checkedInAt?.partnerId;
+         const pId = req.body.checkedInAt?.partnerId || currentUser.checkedInAt?.partnerId;
          if (pId) {
            const p = partners.find(x => x.id === pId);
            if (p) partnerName = p.name;
          }
        } else if (diff === 500) {
-         const pId = req.body.checkedInAt?.partnerId || users[0].checkedInAt?.partnerId;
+         const pId = req.body.checkedInAt?.partnerId || currentUser.checkedInAt?.partnerId;
          if (pId) {
            const p = partners.find(x => x.id === pId);
            if (p) partnerName = p.name;
@@ -764,8 +824,8 @@ async function startServer() {
          }
        }
        
-       if (!users[0].pointLogs) users[0].pointLogs = [];
-       users[0].pointLogs.unshift({
+       if (!currentUser.pointLogs) currentUser.pointLogs = [];
+       currentUser.pointLogs.unshift({
          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
          title,
          points: diff,
@@ -774,15 +834,18 @@ async function startServer() {
        });
     }
 
-    users[0] = { ...users[0], ...req.body };
-    await dbUpsert('rnf_users', users[0]);
-    res.json(users[0]);
+    users[userIndex] = { ...currentUser, ...req.body };
+    currentUser = users[userIndex];
+    await dbUpsert('rnf_users', currentUser);
+    res.json(currentUser);
   });
 
   app.post("/api/user/save_coupon", async (req, res) => {
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    const userIndex = users.findIndex(u => u.id === currentUser.id);
     const { couponId } = req.body;
-    if(!users[0].savedCoupons.includes(couponId)) {
-       users[0].savedCoupons.push(couponId);
+    if(!currentUser.savedCoupons.includes(couponId)) {
+       currentUser.savedCoupons.push(couponId);
        
        let couponDetails: any = null;
        for (const p of partners) {
@@ -794,8 +857,8 @@ async function startServer() {
        }
 
        if (couponDetails) {
-         if (!users[0].pointLogs) users[0].pointLogs = [];
-         users[0].pointLogs.unshift({
+         if (!currentUser.pointLogs) currentUser.pointLogs = [];
+         currentUser.pointLogs.unshift({
            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
            title: {
              ko: `무료 쿠폰 저장: ${couponDetails.coupon.title.ko}`,
@@ -808,17 +871,19 @@ async function startServer() {
            couponCode: couponDetails.coupon.code
          });
        }
-       await dbUpsert('rnf_users', users[0]);
+       await dbUpsert('rnf_users', currentUser);
     }
-    res.json(users[0]);
+    res.json(currentUser);
   });
 
   app.post("/api/user/redeem_coupon", async (req, res) => {
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    const userIndex = users.findIndex(u => u.id === currentUser.id);
     const { couponId, cost } = req.body;
-    if(users[0].points >= cost) {
-       users[0].points -= cost;
-       if(!users[0].savedCoupons.includes(couponId)) {
-         users[0].savedCoupons.push(couponId);
+    if(currentUser.points >= cost) {
+       currentUser.points -= cost;
+       if(!currentUser.savedCoupons.includes(couponId)) {
+         currentUser.savedCoupons.push(couponId);
        }
        
        let couponDetails: any = null;
@@ -830,8 +895,8 @@ async function startServer() {
          }
        }
 
-       if (!users[0].pointLogs) users[0].pointLogs = [];
-       users[0].pointLogs.unshift({
+       if (!currentUser.pointLogs) currentUser.pointLogs = [];
+       currentUser.pointLogs.unshift({
          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
          title: couponDetails ? {
            ko: `쿠폰 교환: ${couponDetails.coupon.title.ko}`,
@@ -844,8 +909,8 @@ async function startServer() {
          couponCode: couponDetails?.coupon?.code
        });
 
-       await dbUpsert('rnf_users', users[0]);
-       res.json({ success: true, user: users[0] });
+       await dbUpsert('rnf_users', currentUser);
+       res.json({ success: true, user: currentUser });
     } else {
        res.status(400).json({ error: "Not enough points" });
     }
@@ -859,15 +924,15 @@ async function startServer() {
   // Claim Daily Mission Reward (+100 Points)
   app.post("/api/user/claim_daily", async (req, res) => {
     const today = new Date().toISOString().split('T')[0];
-    if (users[0].lastDailyClaimDate === today) {
+    if (currentUser.lastDailyClaimDate === today) {
       return res.status(400).json({ error: "Daily mission already claimed today" });
     }
 
-    users[0].lastDailyClaimDate = today;
-    users[0].points += 100;
+    currentUser.lastDailyClaimDate = today;
+    currentUser.points += 100;
 
-    if (!users[0].pointLogs) users[0].pointLogs = [];
-    users[0].pointLogs.unshift({
+    if (!currentUser.pointLogs) currentUser.pointLogs = [];
+    currentUser.pointLogs.unshift({
       id: "daily-" + Date.now(),
       title: {
         ko: "일일 미션 완료 보상",
@@ -878,8 +943,8 @@ async function startServer() {
       timestamp: Date.now()
     });
 
-    await dbUpsert('rnf_users', users[0]);
-    res.json({ success: true, user: users[0] });
+    await dbUpsert('rnf_users', currentUser);
+    res.json({ success: true, user: currentUser });
   });
 
   // Claim VIP Visit Scan Benefit
@@ -893,19 +958,19 @@ async function startServer() {
       return res.status(400).json({ error: "This vendor is not a VIP vendor" });
     }
 
-    if (!users[0].claimedVipBenefits) {
-      users[0].claimedVipBenefits = [];
+    if (!currentUser.claimedVipBenefits) {
+      currentUser.claimedVipBenefits = [];
     }
 
-    if (users[0].claimedVipBenefits.includes(partnerId)) {
+    if (currentUser.claimedVipBenefits.includes(partnerId)) {
       return res.status(400).json({ error: "Already claimed VIP benefits for this venue" });
     }
 
     // Mark as claimed
-    users[0].claimedVipBenefits.push(partnerId);
+    currentUser.claimedVipBenefits.push(partnerId);
 
     // Award +250 Points
-    users[0].points += 250;
+    currentUser.points += 250;
 
     // Award a special VIP coupon to their saved coupons!
     const vipCouponId = "vip-gift-" + partnerId;
@@ -926,13 +991,13 @@ async function startServer() {
       partner.coupons.push(vipCoupon);
     }
 
-    if (!users[0].savedCoupons.includes(vipCouponId)) {
-      users[0].savedCoupons.push(vipCouponId);
+    if (!currentUser.savedCoupons.includes(vipCouponId)) {
+      currentUser.savedCoupons.push(vipCouponId);
     }
 
     // Add point log entry
-    if (!users[0].pointLogs) users[0].pointLogs = [];
-    users[0].pointLogs.unshift({
+    if (!currentUser.pointLogs) currentUser.pointLogs = [];
+    currentUser.pointLogs.unshift({
       id: "vip-visit-" + Date.now(),
       title: {
         ko: `✨ VIP 가맹점 방문 혜택 적립 (${partner.name})`,
@@ -945,9 +1010,9 @@ async function startServer() {
       couponCode: vipCoupon.code
     });
 
-    await dbUpsert('rnf_users', users[0]);
+    await dbUpsert('rnf_users', currentUser);
     await dbUpsert('rnf_partners', partner);
-    res.json({ success: true, user: users[0] });
+    res.json({ success: true, user: currentUser });
   });
 
   // Request user's WhatsApp contact info
@@ -957,14 +1022,14 @@ async function startServer() {
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
     if (!targetUser.contactRequests) targetUser.contactRequests = [];
-    const existing = targetUser.contactRequests.find(r => r.requesterId === users[0].id);
+    const existing = targetUser.contactRequests.find(r => r.requesterId === currentUser.id);
     
     if (!existing) {
       const newRequest = {
         id: "req-" + Date.now(),
-        requesterId: users[0].id,
-        requesterName: users[0].name,
-        requesterAvatar: users[0].avatar,
+        requesterId: currentUser.id,
+        requesterName: currentUser.name,
+        requesterAvatar: currentUser.avatar,
         status: "pending" as const,
         timestamp: Date.now()
       };
@@ -989,13 +1054,13 @@ async function startServer() {
   // Respond to a contact request (Approve / Reject)
   app.post("/api/user/respond_contact_request", async (req, res) => {
     const { requestId, status } = req.body; // status: 'approved' | 'rejected'
-    if (!users[0].contactRequests) users[0].contactRequests = [];
-    const reqIndex = users[0].contactRequests.findIndex(r => r.id === requestId);
+    if (!currentUser.contactRequests) currentUser.contactRequests = [];
+    const reqIndex = currentUser.contactRequests.findIndex(r => r.id === requestId);
     
     if (reqIndex >= 0) {
-      users[0].contactRequests[reqIndex].status = status;
-      await dbUpsert('rnf_users', users[0]);
-      res.json({ success: true, user: users[0] });
+      currentUser.contactRequests[reqIndex].status = status;
+      await dbUpsert('rnf_users', currentUser);
+      res.json({ success: true, user: currentUser });
     } else {
       res.status(404).json({ error: "Request not found" });
     }
@@ -1108,8 +1173,8 @@ async function startServer() {
       });
 
       // Update users array in-memory for the first element sync
-      if (user.id === users[0].id) {
-        users[0] = { ...user };
+      if (user.id === currentUser.id) {
+        currentUser = { ...user };
       }
 
       await dbUpsert('rnf_redemptions', newRedemption);
@@ -1195,8 +1260,8 @@ async function startServer() {
     const { partnerName } = req.body;
     const newActivity: Activity = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-      userName: users[0].name || "Explorer",
-      userAvatar: users[0].avatar || "https://i.pravatar.cc/150?img=68",
+      userName: currentUser.name || "Explorer",
+      userAvatar: currentUser.avatar || "https://i.pravatar.cc/150?img=68",
       partnerName: partnerName || "Partner Place",
       timestamp: Date.now()
     };
