@@ -339,6 +339,22 @@ export default function VendorApp() {
 
   // QR Generator state
   const [selectedCouponId, setSelectedCouponId] = useState<string>('');
+  const [qrType, setQrType] = useState<'claim' | 'verify'>('claim');
+
+  // Promo modal state
+  const [promoModalOpen, setPromoModalOpen] = useState(false);
+  const [editingPromo, setEditingPromo] = useState<Promo | null>(null);
+  const [promoName, setPromoName] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoType, setPromoType] = useState<Promo['type']>('discount_percent');
+  const [promoDiscount, setPromoDiscount] = useState('');
+  const [promoStart, setPromoStart] = useState('');
+  const [promoEnd, setPromoEnd] = useState('');
+  const [promoTerms, setPromoTerms] = useState('');
+
+  // Event button fields
+  const [eventButtonTextEn, setEventButtonTextEn] = useState('');
+  const [eventButtonLink, setEventButtonLink] = useState('');
 
   const showToast = (message: string, type: 'success' | 'info' | 'warning' = 'success') => {
     const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
