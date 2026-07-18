@@ -359,32 +359,61 @@ function RegisterView({ onRegister, onGoLogin }: { onRegister: (u: User) => void
 
 function NotificationsView({ user }: { user: User }) {
   const navigate = useNavigate();
+  const { t } = useI18n();
   return (
-    <div className="pb-24 pt-4 px-4 bg-slate-50 min-h-screen">
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-xl hover:bg-black/5 active:bg-black/10 transition-colors">
-          <ChevronLeft className="w-6 h-6 text-slate-700" />
+    <div className="pb-24 pt-4 px-4 bg-[#FFF8F0] min-h-screen flex flex-col text-black font-sans">
+      <div className="flex items-center gap-3 border-b-4 border-black pb-4 mb-6">
+        <button 
+          onClick={() => { triggerHaptic('tap'); navigate(-1); }} 
+          className="p-2 bg-white border-4 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all flex-shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5 text-black" strokeWidth={3} />
         </button>
-        <h2 className="text-xl font-semibold text-slate-800 tracking-tight">Notifications</h2>
+        <h2 className="text-2xl font-black uppercase text-black tracking-tight">
+          {t({ ko: "알림", en: "Notifications", id: "Notifikasi" })}
+        </h2>
       </div>
-      <div className="space-y-3">
-        {user.pointLogs && user.pointLogs.length > 0 ? user.pointLogs.map((log: any) => (
-          <div key={log.id} className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-start gap-4">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${log.points > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-              {log.points > 0 ? <Plus className="w-5 h-5" /> : <Minus className="w-5 h-5" />}
-            </div>
-            <div>
-              <p className="font-medium text-slate-800 text-sm leading-tight mb-1">{log.title.ko}</p>
-              <p className="text-xs text-slate-500">{new Date(log.timestamp).toLocaleDateString()}</p>
-            </div>
-            {log.points !== 0 && (
-              <div className={`ml-auto font-semibold ${log.points > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {log.points > 0 ? '+' : ''}{log.points}
+
+      <div className="flex flex-col gap-3.5">
+        {user.pointLogs && user.pointLogs.length > 0 ? (
+          user.pointLogs.map((log: any) => {
+            const isEarning = log.points >= 0;
+            return (
+              <div 
+                key={log.id} 
+                className="bg-white p-4 rounded-2xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex items-start gap-4"
+              >
+                <div 
+                  className={cn(
+                    "w-10 h-10 rounded-xl border-2 border-black flex items-center justify-center shrink-0 shadow-[2px_2px_0px_rgba(0,0,0,1)]", 
+                    isEarning ? 'bg-[#A5D6A7]' : 'bg-[#EF9A9A]'
+                  )}
+                >
+                  {isEarning ? <Plus size={18} strokeWidth={3} /> : <Minus size={18} strokeWidth={3} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm uppercase text-black leading-tight mb-1">{t(log.title)}</p>
+                  <p className="text-[10px] font-black text-stone-400 uppercase">{new Date(log.timestamp).toLocaleDateString()}</p>
+                </div>
+                {log.points !== 0 && (
+                  <div 
+                    className={cn(
+                      "ml-auto font-black text-sm border-2 border-black px-2 py-1 rounded-lg shrink-0", 
+                      isEarning ? 'bg-[#E8F5E9] text-[#2E7D32]' : 'bg-[#FFEBEE] text-[#C62828]'
+                    )}
+                  >
+                    {isEarning ? '+' : ''}{log.points}
+                  </div>
+                )}
               </div>
-            )}
+            );
+          })
+        ) : (
+          <div className="text-center text-stone-500 py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
+            <div className="text-5xl mb-3">🔔</div>
+            <h3 className="font-black uppercase">Belum Ada Notifikasi</h3>
+            <p className="text-sm text-stone-400 font-bold mt-1">Riwayat poin kamu akan muncul di sini.</p>
           </div>
-        )) : (
-          <div className="text-center text-slate-500 py-12">No notifications yet.</div>
         )}
       </div>
     </div>
