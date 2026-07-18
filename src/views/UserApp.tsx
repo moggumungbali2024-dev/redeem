@@ -24,6 +24,7 @@ L.Icon.Default.mergeOptions({
 
 
 export default function UserApp() {
+  const navigate = useNavigate();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
