@@ -13,6 +13,8 @@ import { uploadImage } from '../supabase';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import AdventureMap from '../components/AdventureMap';
+
 
 // Fix leaflet default icon issue
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -1649,6 +1651,7 @@ function MapView({ partners, user, categories }: { partners: Partner[], user: Us
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCats, setSelectedCats] = useState<string[]>(['eat', 'nightlife', 'stay', 'wellness']);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [mapMode, setMapMode] = useState<'3d' | '2d'>('3d');
 
   const toggleCategory = (id: string) => {
     setSelectedCats(prev => {
@@ -1698,6 +1701,13 @@ function MapView({ partners, user, categories }: { partners: Partner[], user: Us
               </button>
             )}
           </div>
+          <button 
+            onClick={() => { triggerHaptic('tap'); setMapMode(prev => prev === '3d' ? '2d' : '3d'); }}
+            className="bg-[#1E88E5] text-white border-4 border-black p-3 rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all flex-shrink-0 font-black text-xs uppercase flex items-center gap-1.5"
+          >
+            <Compass size={16} className={cn(mapMode === '3d' && "animate-spin-slow")} />
+            <span>{mapMode === '3d' ? '2D Map' : '3D Play'}</span>
+          </button>
           <div className="bg-[#FDD835] border-4 border-black px-3.5 py-2.5 rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black flex items-center gap-1.5 text-black text-sm flex-shrink-0">
             <Star className="text-black fill-black" size={18} /> 
             <span>{(user.points/1000).toFixed(1)}k</span>
@@ -1721,21 +1731,33 @@ function MapView({ partners, user, categories }: { partners: Partner[], user: Us
       </div>
 
       <div className="flex-1 w-full relative z-[10] border-t-[6px] border-black">
-        <MapContainer center={[-8.6478, 115.1385]} zoom={14} style={{ height: '100%', width: '100%' }}>
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        {mapMode === '3d' ? (
+          <AdventureMap
+            partners={filteredPartners}
+            selectedPartner={selectedPartner}
+            onSelectPartner={(p) => {
+              triggerHaptic('success');
+              setSelectedPartner(p);
+            }}
           />
-          {filteredPartners.map(p => (
-            <Marker key={p.id} position={[p.latitude!, p.longitude!]} eventHandlers={{ click: () => setSelectedPartner(p) }}>
-              <Popup>
-                <div className="font-bold">{p.name}</div>
-                {p.googleMapsUrl && <a href={p.googleMapsUrl} target="_blank" className="text-blue-500 underline text-xs">Open in Maps</a>}
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
+        ) : (
+          <MapContainer center={[-8.6478, 115.1385]} zoom={14} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {filteredPartners.map(p => (
+              <Marker key={p.id} position={[p.latitude!, p.longitude!]} eventHandlers={{ click: () => setSelectedPartner(p) }}>
+                <Popup>
+                  <div className="font-bold">{p.name}</div>
+                  {p.googleMapsUrl && <a href={p.googleMapsUrl} target="_blank" className="text-blue-500 underline text-xs">Open in Maps</a>}
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        )}
       </div>
+
 
       <AnimatePresence>
         {selectedPartner && (

@@ -12,6 +12,9 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        workbox: {
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024 // 5MB
+        },
         manifest: {
           name: 'Redeem-n Fun',
           short_name: 'Redeem-n Fun',
