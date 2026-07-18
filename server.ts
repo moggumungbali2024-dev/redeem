@@ -1060,6 +1060,8 @@ async function startServer() {
 
   // Claim Daily Mission Reward (+100 Points)
   app.post("/api/user/claim_daily", async (req, res) => {
+    const currentUser = users.find(u => u.id === (req.body.userId || 'u1'));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const today = new Date().toISOString().split('T')[0];
     if (currentUser.lastDailyClaimDate === today) {
       return res.status(400).json({ error: "Daily mission already claimed today" });
@@ -1087,6 +1089,8 @@ async function startServer() {
   // Claim VIP Visit Scan Benefit
   app.post("/api/user/claim_vip_visit", async (req, res) => {
     const { partnerId } = req.body;
+    const currentUser = users.find(u => u.id === (req.body.userId || 'u1'));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const partner = partners.find(p => p.id === partnerId);
     if (!partner) {
       return res.status(404).json({ error: "Partner venue not found" });
@@ -1155,6 +1159,8 @@ async function startServer() {
   // Request user's WhatsApp contact info
   app.post("/api/user/request_contact", async (req, res) => {
     const { targetUserId } = req.body;
+    const currentUser = users.find(u => u.id === (req.body.userId || 'u1'));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const targetUser = users.find(u => u.id === targetUserId);
     if (!targetUser) return res.status(404).json({ error: "User not found" });
 
@@ -1191,6 +1197,8 @@ async function startServer() {
   // Respond to a contact request (Approve / Reject)
   app.post("/api/user/respond_contact_request", async (req, res) => {
     const { requestId, status } = req.body; // status: 'approved' | 'rejected'
+    const currentUser = users.find(u => u.id === (req.body.userId || 'u1'));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     if (!currentUser.contactRequests) currentUser.contactRequests = [];
     const reqIndex = currentUser.contactRequests.findIndex(r => r.id === requestId);
     
@@ -1395,6 +1403,8 @@ async function startServer() {
 
   app.post("/api/activities", async (req, res) => {
     const { partnerName } = req.body;
+    const currentUser = users.find(u => u.id === (req.body.userId || 'u1'));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const newActivity: Activity = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
       userName: currentUser.name || "Explorer",

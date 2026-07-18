@@ -251,7 +251,7 @@ export const api = {
     const res = await fetch('/api/activities', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ partnerName }),
+      body: JSON.stringify({ partnerName, userId: localStorage.getItem('userId') || 'u1' }),
     });
     return res.json();
   },
