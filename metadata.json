@@ -1,0 +1,6 @@
+{
+  "name": "redeem-n.fun",
+  "description": "Fun, high-fidelity coupon redemption & promotional loyalty platform with multi-tiered vendor services (Basic, Plus, and VIP) featuring gamified check-ins, sponsored ads, and custom event calendars.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

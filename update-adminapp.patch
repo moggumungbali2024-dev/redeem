@@ -1,0 +1,80 @@
+--- src/views/AdminApp.tsx
++++ src/views/AdminApp.tsx
+@@ -4,7 +4,7 @@
+ import { api } from '../api';
+-import { Partner, ClickData, Category, AppSettings } from '../types';
+-import { ArrowLeft, Plus, Edit2, Trash2, BarChart2, Users, LayoutList, Settings as SettingsIcon } from 'lucide-react';
++import { Partner, ClickData, Category, AppSettings, AppEvent, Coupon } from '../types';
++import { ArrowLeft, Plus, Edit2, Trash2, BarChart2, Users, LayoutList, Settings as SettingsIcon, Calendar } from 'lucide-react';
+ import { cn } from '../lib/utils';
+ 
+ export default function AdminApp() {
+@@ -14,10 +14,11 @@
+   const [password, setPassword] = useState('');
+ 
+-  const [tab, setTab] = useState<'partners' | 'categories' | 'settings' | 'analytics'>('partners');
++  const [tab, setTab] = useState<'partners' | 'categories' | 'events' | 'settings' | 'analytics'>('partners');
+   
+   const [partners, setPartners] = useState<Partner[]>([]);
+   const [categories, setCategories] = useState<Category[]>([]);
++  const [events, setEvents] = useState<AppEvent[]>([]);
+   const [settings, setSettings] = useState<AppSettings>({ splashLogo: '' });
+   const [analytics, setAnalytics] = useState<ClickData>({});
+ 
+@@ -26,6 +27,8 @@
+     setPartners(p);
+     const c = await api.getCategories();
+     setCategories(c);
++    const e = await api.getEvents();
++    setEvents(e);
+     const s = await api.getSettings();
+     setSettings(s);
+@@ -103,4 +106,5 @@
+         <TabButton active={tab === 'partners'} onClick={() => setTab('partners')} icon={<Users size={18}/>} label="Partners" />
+         <TabButton active={tab === 'categories'} onClick={() => setTab('categories')} icon={<LayoutList size={18}/>} label="Categories" />
++        <TabButton active={tab === 'events'} onClick={() => setTab('events')} icon={<Calendar size={18}/>} label="Events" />
+         <TabButton active={tab === 'settings'} onClick={() => setTab('settings')} icon={<SettingsIcon size={18}/>} label="Settings" />
+         <TabButton active={tab === 'analytics'} onClick={() => setTab('analytics')} icon={<BarChart2 size={18}/>} label="Stats" />
+@@ -121,7 +125,7 @@
+                 </div>
+                 <div className="flex gap-2">
+-                  <button className="p-3 text-white bg-[#1E88E5] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none rounded-xl"><Edit2 size={16} strokeWidth={3}/></button>
++                  <button onClick={() => alert('Partner editing to be implemented...')} className="p-3 text-white bg-[#1E88E5] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none rounded-xl"><Edit2 size={16} strokeWidth={3}/></button>
+                   <button onClick={() => handleDeletePartner(p.id)} className="p-3 text-white bg-[#E53935] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none rounded-xl"><Trash2 size={16} strokeWidth={3}/></button>
+                 </div>
+               </div>
+@@ -158,4 +162,35 @@
+ 
++        {tab === 'events' && (
++          <div className="flex flex-col gap-4">
++            <button onClick={async () => {
++              const title = prompt('Event Title (EN)?');
++              const date = prompt('Event Date (e.g. 2026-08-15)?');
++              const image = prompt('Event Landscape Image URL?', 'https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=600&q=80');
++              if(title && date && image) {
++                await api.createEvent({
++                  title: { ko: title, en: title, id: title },
++                  date,
++                  image
++                });
++                fetchData();
++              }
++            }} className="bg-[#43A047] text-white border-4 border-black py-4 rounded-xl font-black flex justify-center items-center gap-2 mb-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase">
++              <Plus size={20} strokeWidth={3} /> Add Event
++            </button>
++            {events.map(e => (
++              <div key={e.id} className="bg-white p-4 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex flex-col gap-2">
++                <img src={e.image} alt="event" className="w-full h-32 rounded-xl object-cover border-2 border-black" />
++                <div className="flex justify-between items-center mt-2">
++                  <div>
++                    <h3 className="font-black text-black text-lg">{e.title.en}</h3>
++                    <p className="text-sm font-bold text-gray-500 uppercase">{e.date}</p>
++                  </div>
++                  <button onClick={async () => { if(confirm('Delete event?')) { await api.deleteEvent(e.id); fetchData(); } }} className="p-3 text-white bg-[#E53935] border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none rounded-xl"><Trash2 size={16} strokeWidth={3}/></button>
++                </div>
++              </div>
++            ))}
++          </div>
++        )}
++
+         {tab === 'settings' && (

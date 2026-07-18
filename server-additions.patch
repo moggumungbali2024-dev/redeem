@@ -1,0 +1,67 @@
+--- server.ts
++++ server.ts
+@@ -172,6 +172,25 @@
+   }
+ ];
+ 
++import { User, AppEvent } from "./src/types";
++
++let users: User[] = [
++  {
++    id: "u1",
++    name: "Explorer",
++    avatar: "https://i.pravatar.cc/150?img=68",
++    points: 84320,
++    profileCompleted: false,
++    savedCoupons: [],
++  }
++];
++
++let events: AppEvent[] = [
++  { id: "e1", title: { ko: "비치 클럽 썸머 파티", en: "Beach Club Summer Party", id: "Pesta Musim Panas Klub Pantai" }, date: "2026-08-15", image: "https://images.unsplash.com/photo-1545128485-c400e7702796?auto=format&fit=crop&w=600&q=80" },
++  { id: "e2", title: { ko: "요가 앤 웰니스 리트릿", en: "Yoga & Wellness Retreat", id: "Retret Yoga & Kesehatan" }, date: "2026-09-01", image: "https://images.unsplash.com/photo-1593811167562-9cef47bfc4d7?auto=format&fit=crop&w=600&q=80" }
++];
++
+ // Click analytics tracking (partnerId_platform -> count)
+ let clicks: Record<string, number> = {};
+ 
+@@ -253,6 +272,39 @@
+     res.json(clicks);
+   });
+ 
++  // User Profile
++  app.get("/api/user", (req, res) => {
++    res.json(users[0]); // mock current user
++  });
++
++  app.put("/api/user", (req, res) => {
++    users[0] = { ...users[0], ...req.body };
++    res.json(users[0]);
++  });
++
++  app.post("/api/user/save_coupon", (req, res) => {
++    const { couponId } = req.body;
++    if(!users[0].savedCoupons.includes(couponId)) {
++       users[0].savedCoupons.push(couponId);
++    }
++    res.json(users[0]);
++  });
++
++  // Events
++  app.get("/api/events", (req, res) => {
++    res.json(events);
++  });
++
++  app.post("/api/events", (req, res) => {
++    const newEvent = { ...req.body, id: Date.now().toString() };
++    events.push(newEvent);
++    res.json(newEvent);
++  });
++
++  app.delete("/api/events/:id", (req, res) => {
++    events = events.filter(e => e.id !== req.params.id);
++    res.json({ success: true });
++  });
++
+   // Vite middleware for development
+   if (process.env.NODE_ENV !== "production") {
