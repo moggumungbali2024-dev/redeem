@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { Partner, ClickData, Category, AppSettings, AppEvent, Coupon, Faq } from '../types';
+import { uploadImage } from '../supabase';
 import { ArrowLeft, Plus, Edit2, Trash2, BarChart2, Users, LayoutList, Settings as SettingsIcon, Calendar, X, HelpCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -111,6 +112,24 @@ export default function AdminApp() {
     if(newLogo !== null) {
       await api.updateSettings({ splashLogo: newLogo });
       fetchData();
+    }
+  };
+
+  const handleResetDatabase = async () => {
+    if (confirm("WARNING: This will delete all your data and reset the database to factory defaults! Are you absolutely sure?")) {
+      const confirmation = prompt("Type 'RESET' to confirm:");
+      if (confirmation === 'RESET') {
+        try {
+          await api.resetDatabase();
+          alert("Database has been reset successfully. The page will now reload.");
+          window.location.reload();
+        } catch (err) {
+          console.error("Failed to reset database", err);
+          alert("An error occurred while resetting the database.");
+        }
+      } else {
+        alert("Reset cancelled.");
+      }
     }
   };
 
@@ -252,6 +271,14 @@ export default function AdminApp() {
                 </div>
                 <button onClick={updateLogo} className="bg-[#FDD835] text-black border-4 border-black py-3 px-6 rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase">
                   Update Logo
+                </button>
+              </div>
+
+              <div className="bg-[#FFEAEA] p-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex flex-col items-center text-center gap-4 mt-4">
+                <h3 className="font-black text-xl uppercase text-[#D32F2F]">Danger Zone</h3>
+                <p className="text-sm font-bold text-gray-700">This action will wipe all data and restore factory defaults.</p>
+                <button onClick={handleResetDatabase} className="bg-[#D32F2F] text-white border-4 border-black py-3 px-6 rounded-xl font-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all uppercase">
+                  Factory Reset Data
                 </button>
               </div>
             </div>
@@ -457,7 +484,23 @@ function PartnerForm({ initialData, onSave, categories }: { initialData: any, on
        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
          <div className="flex flex-col gap-1">
            <label className="font-black text-sm uppercase">Logo URL</label>
-           <input required type="text" value={formData.logo} onChange={e => handleChange('logo', e.target.value)} className="border-4 border-black rounded-xl p-3 font-bold bg-[#FFF8F0]" />
+           <div className="flex gap-2">
+             <input required type="text" value={formData.logo} onChange={e => handleChange('logo', e.target.value)} className="flex-1 border-4 border-black rounded-xl p-3 font-bold bg-[#FFF8F0]" />
+             <label className="bg-[#1E88E5] text-white border-4 border-black py-3 px-4 rounded-xl font-black uppercase cursor-pointer hover:bg-[#1976D2] active:translate-y-[2px] active:translate-x-[2px]">
+               Upload
+               <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                 const file = e.target.files?.[0];
+                 if (file) {
+                   try {
+                     const url = await uploadImage(file, 'vendors/logo_' + (formData.id || Date.now()));
+                     handleChange('logo', url);
+                   } catch (err) {
+                     console.error("Upload failed", err);
+                   }
+                 }
+               }} />
+             </label>
+           </div>
          </div>
          <div className="flex flex-col gap-1">
            <label className="font-black text-sm uppercase">Distance (km)</label>

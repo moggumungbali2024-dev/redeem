@@ -452,6 +452,17 @@ let activities: Activity[] = [
   }
 ];
 
+const defaultSnapshots = {
+  settings: JSON.stringify(settings),
+  categories: JSON.stringify(categories),
+  partners: JSON.stringify(partners),
+  users: JSON.stringify(users),
+  redemptions: JSON.stringify(redemptions),
+  events: JSON.stringify(events),
+  faqs: JSON.stringify(faqs),
+  activities: JSON.stringify(activities)
+};
+
 // Click analytics tracking (partnerId_platform -> count)
 let clicks: Record<string, number> = {};
 
@@ -581,6 +592,49 @@ async function startServer() {
   app.use(express.json());
 
   // --- API ROUTES ---
+
+  app.post("/api/admin/reset", async (req, res) => {
+    // 1. Reset in-memory states
+    settings = JSON.parse(defaultSnapshots.settings);
+    categories = JSON.parse(defaultSnapshots.categories);
+    partners = JSON.parse(defaultSnapshots.partners);
+    users = JSON.parse(defaultSnapshots.users);
+    redemptions = JSON.parse(defaultSnapshots.redemptions);
+    events = JSON.parse(defaultSnapshots.events);
+    faqs = JSON.parse(defaultSnapshots.faqs);
+    activities = JSON.parse(defaultSnapshots.activities);
+    clicks = {};
+
+    // 2. Wipe and re-insert into Supabase
+    if (supabase) {
+      try {
+        // Delete all rows in order (ignoring foreign keys mostly because we delete all)
+        // neq('id', 'nonexistent') is a trick to delete all rows
+        await supabase.from('rnf_redemptions').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_activities').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_faqs').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_events').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_partners').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_categories').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_settings').delete().neq('id', 'nonexistent');
+        await supabase.from('rnf_users').delete().neq('id', 'nonexistent');
+
+        // Re-insert pristine defaults
+        await supabase.from('rnf_settings').insert([settings]);
+        await supabase.from('rnf_categories').insert(categories);
+        await supabase.from('rnf_partners').insert(partners);
+        await supabase.from('rnf_users').insert(users);
+        await supabase.from('rnf_events').insert(events);
+        await supabase.from('rnf_faqs').insert(faqs);
+        await supabase.from('rnf_redemptions').insert(redemptions);
+        await supabase.from('rnf_activities').insert(activities);
+      } catch (err) {
+        console.error("Failed to reset Supabase data:", err);
+      }
+    }
+
+    res.json({ success: true, message: "Database reset to factory defaults." });
+  });
 
   app.get("/api/logo.jpg", (req, res) => {
     res.sendFile(path.join(process.cwd(), "src/assets/images/app_logo_1784356024934.jpg"));

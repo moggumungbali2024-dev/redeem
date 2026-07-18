@@ -207,5 +207,12 @@ export const api = {
       body: JSON.stringify({ partnerId })
     });
     return res.json();
+  },
+  resetDatabase: async (): Promise<{ success: boolean; message: string }> => {
+    const res = await fetch('/api/admin/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return res.json();
   }
 };

@@ -156,12 +156,29 @@ export default function UserApp() {
 function ProfileModal({ user, onClose, onSave }: { user: User, onClose: () => void, onSave: (u: User) => void }) {
   const [name, setName] = useState(user.name);
   const [avatar, setAvatar] = useState(user.avatar);
+  const [uploading, setUploading] = useState(false);
   const avatars = [
     "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150",
     "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&h=150",
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150",
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
   ];
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        const url = await uploadImage(file, 'avatars/' + user.id);
+        setAvatar(url);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -170,11 +187,23 @@ function ProfileModal({ user, onClose, onSave }: { user: User, onClose: () => vo
          className="bg-white border-4 border-black rounded-[24px] p-6 w-full max-w-[320px] relative z-10 flex flex-col items-center shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
        >
           <h2 className="text-xl font-black uppercase mb-4 text-black tracking-tighter">Edit Profile</h2>
+          
+          <div className="relative mb-4">
+            <img src={avatar} className="w-24 h-24 rounded-full object-cover border-4 border-black" alt="avatar" />
+            <label className="absolute bottom-0 right-0 bg-[#FDD835] p-2 rounded-full border-2 border-black cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-[#FBC02D]">
+              <input type="file" className="hidden" accept="image/*" onChange={handleUpload} disabled={uploading} />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </label>
+            {uploading && <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center"><div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>}
+          </div>
+
+          <p className="text-xs font-bold text-gray-500 mb-2">Or choose an avatar:</p>
           <div className="flex gap-2 mb-4 justify-center flex-wrap">
             {avatars.map((a, i) => (
-              <img key={i} src={a} onClick={() => setAvatar(a)} className={`w-12 h-12 rounded-full object-cover border-2 ${avatar === a ? 'border-[#E53935] border-4' : 'border-black'} cursor-pointer`} alt="avatar option" />
+              <img key={i} src={a} onClick={() => setAvatar(a)} className={`w-10 h-10 rounded-full object-cover border-2 ${avatar === a ? 'border-[#E53935] border-4' : 'border-black'} cursor-pointer`} alt="avatar option" />
             ))}
           </div>
+
           <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full border-4 border-black rounded-xl px-4 py-2 font-bold mb-6 outline-none focus:border-[#E53935]" placeholder="Your Name" />
           
           <button onClick={() => { onSave({ ...user, name, avatar }); onClose(); }} className="w-full bg-[#FDD835] text-black border-4 border-black py-3 rounded-xl font-black uppercase shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all">
