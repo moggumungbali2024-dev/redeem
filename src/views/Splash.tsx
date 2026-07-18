@@ -7,7 +7,7 @@ export default function Splash({ onFinish }: { onFinish: () => void }) {
 
   useEffect(() => {
     api.getSettings().then(s => {
-      setLogo(s.splashLogo);
+      setLogo(s.splashLogo || '/favicon.png');
       setTimeout(onFinish, 2500); // 2.5s splash
     });
   }, [onFinish]);

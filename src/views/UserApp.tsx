@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { QrCode, Scan, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet } from 'lucide-react';
+import { QrCode, ChevronLeft, LogOut, Scan, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api';
 import { Partner, Category, User, AppEvent, Activity, Faq } from '../types';
