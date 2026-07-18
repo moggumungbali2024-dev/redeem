@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { QrCode, ChevronLeft, LogOut, Scan, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet } from 'lucide-react';
+import { QrCode, ChevronLeft, LogOut, Scan, Plus, Minus, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api';
 import { Partner, Category, User, AppEvent, Activity, Faq } from '../types';
@@ -83,7 +83,28 @@ export default function UserApp() {
     return () => clearTimeout(timer);
   }, [user?.subscribedToNotifications, user?.id]);
 
-  if (!user) return <div className="flex-1 bg-[#FFF8F0]" />;
+  if (!isAuthenticated) {
+    return (
+      <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#FFF8F0] relative">
+        <Routes>
+          <Route path="/register" element={<RegisterView onRegister={(u) => {
+            localStorage.setItem('userId', u.id);
+            setUser(u);
+            setIsAuthenticated(true);
+            navigate('/');
+          }} onGoLogin={() => navigate('/login')} />} />
+          <Route path="*" element={<LoginView onLogin={(u) => {
+            localStorage.setItem('userId', u.id);
+            setUser(u);
+            setIsAuthenticated(true);
+            navigate('/');
+          }} onGoRegister={() => navigate('/register')} />} />
+        </Routes>
+      </div>
+    );
+  }
+
+  if (!user) return <div className="flex-1 bg-[#FFF8F0] flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-black border-t-transparent animate-spin"></div></div>;
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto bg-[#FFF8F0] pb-20 overflow-x-hidden relative">
