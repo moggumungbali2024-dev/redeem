@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package.json package-lock.json* bun.lock* ./
 
 # Install dependencies (fallback to npm if others fail)
-RUN if [ -f package-lock.json ]; then npm ci; \
+RUN if [ -f package-lock.json ]; then npm install; \
     elif [ -f bun.lock ]; then npm install -g bun && bun install; \
     else npm install; \
     fi
