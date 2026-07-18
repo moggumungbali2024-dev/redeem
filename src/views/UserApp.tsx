@@ -204,40 +204,57 @@ function LoginView({ onLogin, onGoRegister }: { onLogin: (u: User) => void, onGo
       if (res.success && res.user) {
         onLogin(res.user);
       } else {
-        alert(res.error || "Login failed");
+        alert('Login failed: ' + (res.error || 'Invalid credentials'));
       }
-    } catch (err) {
-      alert("Error logging in");
+    } catch (e) {
+      alert('Error during login');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-indigo-50 to-white">
-      <div className="w-full max-w-sm p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
-        <div className="flex justify-center mb-6">
-          <img src="/favicon.png" alt="Logo" className="w-20 h-20 rounded-2xl shadow-lg" />
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
+      <div className="w-full max-w-sm bg-[#FDD835] border-[4px] border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white border-[4px] border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+           <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover p-2" />
         </div>
-        <h2 className="text-2xl font-bold text-center text-slate-800 mb-8 tracking-tight">Welcome Back</h2>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <h2 className="text-3xl font-black text-center mt-6 mb-6 uppercase tracking-tighter">Welcome Back!</h2>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp Number</label>
-            <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required placeholder="+628123456789" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block">WhatsApp Number</label>
+            <input 
+              type="text" 
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="+6281234567890" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block">Password</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 mt-2 shadow-md">
-            {loading ? "Logging in..." : "Log In"}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-[#1E88E5] text-white border-[4px] border-black p-4 rounded-xl font-black text-xl uppercase mt-4 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-[4px] active:translate-x-[4px] active:shadow-none flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {loading ? <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div> : "Log In"}
           </button>
         </form>
-        <p className="mt-8 text-center text-sm text-slate-500">
-          Don't have an account?{' '}
-          <button onClick={onGoRegister} className="text-indigo-600 font-medium hover:text-indigo-500 transition-colors">
-            Register here
-          </button>
+        <p className="mt-8 text-center font-bold text-sm">
+          Don't have an account? <br/>
+          <button type="button" onClick={onGoRegister} className="mt-2 text-[#E53935] uppercase font-black border-b-[3px] border-[#E53935] hover:text-black hover:border-black transition-colors">Register here</button>
         </p>
       </div>
     </div>
@@ -245,10 +262,10 @@ function LoginView({ onLogin, onGoRegister }: { onLogin: (u: User) => void, onGo
 }
 
 function RegisterView({ onRegister, onGoLogin }: { onRegister: (u: User) => void, onGoLogin: () => void }) {
-  const [name, setName] = React.useState('');
-  const [email, setEmail] = React.useState('');
   const [whatsapp, setWhatsapp] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
   const [loading, setLoading] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,48 +276,79 @@ function RegisterView({ onRegister, onGoLogin }: { onRegister: (u: User) => void
       if (res.success && res.user) {
         onRegister(res.user);
       } else {
-        alert(res.error || "Registration failed");
+        alert('Registration failed: ' + (res.error || 'Unknown error'));
       }
-    } catch (err) {
-      alert("Error registering");
+    } catch (e) {
+      alert('Error during registration');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-gradient-to-b from-indigo-50 to-white">
-      <div className="w-full max-w-sm p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white">
-        <div className="flex justify-center mb-6">
-          <img src="/favicon.png" alt="Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+    <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#FFF8F0] min-h-full">
+      <div className="w-full max-w-sm bg-[#43A047] border-[4px] border-black p-8 rounded-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative">
+        <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-white border-[4px] border-black rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
+           <img src="/favicon.png" alt="Logo" className="w-full h-full object-cover p-2" />
         </div>
-        <h2 className="text-2xl font-bold text-center text-slate-800 mb-8 tracking-tight">Create Account</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-3xl font-black text-center mt-6 mb-6 uppercase tracking-tighter text-white">Join the Fun!</h2>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-            <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Doe" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block text-white">Full Name</label>
+            <input 
+              type="text" 
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. John Doe" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="john@example.com" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block text-white">WhatsApp Number</label>
+            <input 
+              type="text" 
+              value={whatsapp}
+              onChange={(e) => setWhatsapp(e.target.value)}
+              placeholder="+6281234567890" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp Number</label>
-            <input type="text" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required placeholder="+628123456789" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block text-white">Email</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="hello@example.com" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all bg-slate-50/50" />
+            <label className="text-sm font-black uppercase tracking-wider mb-2 block text-white">Password</label>
+            <input 
+              type="password" 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" 
+              className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black/10 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+              required
+            />
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 px-4 bg-slate-900 text-white font-medium rounded-xl hover:bg-slate-800 active:scale-[0.98] transition-all disabled:opacity-50 mt-4 shadow-md">
-            {loading ? "Registering..." : "Sign Up"}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full bg-[#E53935] text-white border-[4px] border-black p-4 rounded-xl font-black text-xl uppercase mt-4 hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all active:translate-y-[4px] active:translate-x-[4px] active:shadow-none flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {loading ? <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div> : "Register"}
           </button>
         </form>
-        <p className="mt-8 text-center text-sm text-slate-500">
-          Already have an account?{' '}
-          <button onClick={onGoLogin} className="text-indigo-600 font-medium hover:text-indigo-500 transition-colors">
-            Log in here
-          </button>
+        <p className="mt-8 text-center font-bold text-sm text-white">
+          Already have an account? <br/>
+          <button type="button" onClick={onGoLogin} className="mt-2 text-[#FDD835] uppercase font-black border-b-[3px] border-[#FDD835] hover:text-white hover:border-white transition-colors">Log In here</button>
         </p>
       </div>
     </div>
