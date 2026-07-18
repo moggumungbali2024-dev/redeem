@@ -809,6 +809,16 @@ export default function VendorApp() {
     return null;
   }
 
+  // Fallback loading indicator if activeVendor is undefined (still syncing from Supabase)
+  if (!activeVendor) {
+    return (
+      <div className="flex-1 bg-[#FFF8F0] min-h-full flex flex-col items-center justify-center p-6">
+        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-black uppercase text-xs tracking-widest text-stone-500 animate-pulse">Memuat Data Vendor...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 bg-[#FFF8F0] min-h-full flex flex-col text-black font-sans relative">
       {/* Header Panel */}

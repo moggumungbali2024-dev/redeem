@@ -605,7 +605,7 @@ export function PublicProfileModal({ user, currentUser, onClose }: PublicProfile
         <div className="grid grid-cols-2 gap-3 bg-[#FFF8F0] p-4 border-4 border-black rounded-2xl text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <div>
             <span className="text-[10px] font-black uppercase text-gray-400 block leading-none">Total points</span>
-            <span className="font-black text-xl text-[#E53935]">{user.points.toLocaleString()}</span>
+             <span className="font-black text-xl text-[#E53935]">{(user.points || 0).toLocaleString()}</span>
           </div>
           <div>
             <span className="text-[10px] font-black uppercase text-gray-400 block leading-none">Current level</span>
@@ -724,7 +724,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
   const [currentEvent, setCurrentEvent] = useState(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const prevPoints = useRef(user.points);
+  const prevPoints = useRef(user.points || 0);
 
   const [leaderboard, setLeaderboard] = useState<User[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -736,7 +736,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
   }, [user.points]);
 
   useEffect(() => {
-    const currentLvl = Math.floor(user.points / 10000) + 1;
+    const currentLvl = Math.floor((user.points || 0) / 10000) + 1;
     const prevLvl = Math.floor(prevPoints.current / 10000) + 1;
     if (prevPoints.current > 0 && currentLvl > prevLvl) {
       setTimeout(() => {
@@ -744,7 +744,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
         setShowLevelUp(true);
       }, 1000);
     }
-    prevPoints.current = user.points;
+    prevPoints.current = user.points || 0;
   }, [user.points]);
 
   useEffect(() => {
@@ -755,7 +755,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
     return () => clearInterval(int);
   }, [events]);
 
-  const userLevel = Math.floor(user.points / 10000) + 1;
+  const userLevel = Math.floor((user.points || 0) / 10000) + 1;
 
   return (
     <motion.div 
@@ -841,7 +841,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
           <div className="flex justify-between items-start z-10 relative mb-3">
             <div>
               <p className="text-[10px] font-black uppercase mb-0.5 tracking-widest text-white/90">{t({ ko: '나의 여정 포인트', en: 'Available Miles', id: 'Poin Tersedia' })}</p>
-              <h2 className="text-2xl md:text-3xl font-black drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] tracking-tighter">{user.points.toLocaleString()}</h2>
+              <h2 className="text-2xl md:text-3xl font-black drop-shadow-[2px_2px_0px_rgba(0,0,0,1)] tracking-tighter">{(user.points || 0).toLocaleString()}</h2>
             </div>
             
             <div className="flex flex-col items-center">
@@ -855,12 +855,12 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
           <div className="z-10 relative bg-black/20 p-3 rounded-xl border-2 border-black/30 backdrop-blur-sm">
              <div className="flex justify-between items-end mb-1">
                <span className="font-black text-[#FDD835] text-sm uppercase tracking-widest">Level {userLevel}</span>
-               <span className="font-black text-[9px] uppercase opacity-80">{(user.points % 10000).toLocaleString()} / 10,000 PTS to next</span>
+               <span className="font-black text-[9px] uppercase opacity-80">{(((user.points || 0) % 10000)).toLocaleString()} / 10,000 PTS to next</span>
              </div>
              <div className="w-full h-3 bg-white/30 rounded-full border-2 border-black overflow-hidden relative">
                  <motion.div 
                    initial={{ width: 0 }} 
-                   animate={{ width: `${((user.points % 10000) / 10000) * 100}%` }} 
+                   animate={{ width: `${(((user.points || 0) % 10000) / 10000) * 100}%` }} 
                    transition={{ duration: 1, ease: "easeOut" }}
                    className="absolute top-0 left-0 bottom-0 bg-[#FDD835] border-r-2 border-black" 
                  />
@@ -1112,7 +1112,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
             <div className="text-center py-4 text-xs font-bold text-stone-400">Loading leaderboard...</div>
           ) : (
             leaderboard.map((explorer, index) => {
-              const explorerLevel = Math.floor(explorer.points / 10000) + 1;
+              const explorerLevel = Math.floor((explorer.points || 0) / 10000) + 1;
               const isCurrentUser = explorer.id === user.id;
               
               return (
@@ -1155,7 +1155,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
                   
                   {/* Points */}
                   <div className="text-right shrink-0">
-                    <span className="font-black text-xs text-black block">{explorer.points.toLocaleString()}</span>
+                    <span className="font-black text-xs text-black block">{((explorer.points || 0)).toLocaleString()}</span>
                     <span className="text-[8px] font-bold text-stone-400 uppercase leading-none block">PTS</span>
                   </div>
                 </div>
@@ -1308,7 +1308,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
   const handleCheckIn = () => {
     setCheckInTime(Date.now());
     setPointAnim({ amount: 50, type: 'earn' });
-    api.updateUser({ ...user, points: user.points + 50 }).then(setUser);
+    api.updateUser({ ...user, points: (user.points || 0) + 50 }).then(setUser);
     
     // Simulate 30min stay (show review reward prompt after 3 sec)
     setTimeout(() => {
@@ -1327,7 +1327,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
 
   const handleRedeem = async (coupon: any) => {
     if (coupon.type === 'redeem') {
-       if (user.points >= (coupon.cost || 0)) {
+       if ((user.points || 0) >= (coupon.cost || 0)) {
            const res = await api.redeemCoupon(coupon.id, coupon.cost || 0);
            if (res.success && res.user) {
              setPointAnim({ amount: coupon.cost || 0, type: 'spend' });
@@ -1358,7 +1358,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
     setUserComment('');
     setHasReviewed(true);
     setPointAnim({ amount: 500, type: 'earn' });
-    api.updateUser({ ...user, points: user.points + 500 }).then(setUser);
+    api.updateUser({ ...user, points: (user.points || 0) + 500 }).then(setUser);
   };
 
   return (
@@ -1739,7 +1739,7 @@ function MapView({ partners, user, categories }: { partners: Partner[], user: Us
           </button>
           <div className="bg-[#FDD835] border-4 border-black px-3.5 py-2.5 rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-black flex items-center gap-1.5 text-black text-sm flex-shrink-0">
             <Star className="text-black fill-black" size={18} /> 
-            <span>{(user.points/1000).toFixed(1)}k</span>
+            <span>{((((user.points || 0))/1000)).toFixed(1)}k</span>
           </div>
         </div>
 
@@ -1881,7 +1881,7 @@ function WalletView({ user, partners }: { user: User, partners: Partner[] }) {
 
   const handleRedeem = async (coupon: any) => {
     triggerHaptic('tap');
-    if (user.points < coupon.cost) {
+    if ((user.points || 0) < coupon.cost) {
       alert('Not enough points!');
       return;
     }
@@ -2032,7 +2032,7 @@ function WalletView({ user, partners }: { user: User, partners: Partner[] }) {
       <div className="p-3 md:p-5 flex flex-col gap-3 md:gap-6 flex-1 overflow-y-auto max-w-[600px] mx-auto w-full">
          <div className="bg-[#1E88E5] text-white border-4 border-black p-6 rounded-[32px] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] shrink-0">
             <p className="text-sm font-black uppercase mb-1">Total Points</p>
-            <h2 className="text-4xl md:text-5xl font-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{user.points.toLocaleString()}</h2>
+            <h2 className="text-4xl md:text-5xl font-black drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{(user.points || 0).toLocaleString()}</h2>
          </div>
          
          {activeTab === 'saved' && (
