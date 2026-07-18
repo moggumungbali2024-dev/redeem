@@ -790,13 +790,15 @@ async function startServer() {
 
   // User Profile
   app.get("/api/user", (req, res) => {
-    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const userIndex = users.findIndex(u => u.id === currentUser.id);
     res.json(currentUser);
   });
 
   app.put("/api/user", async (req, res) => {
-    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const userIndex = users.findIndex(u => u.id === currentUser.id);
     const oldPoints = currentUser.points;
     const newPoints = req.body.points;
@@ -841,7 +843,8 @@ async function startServer() {
   });
 
   app.post("/api/user/save_coupon", async (req, res) => {
-    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const userIndex = users.findIndex(u => u.id === currentUser.id);
     const { couponId } = req.body;
     if(!currentUser.savedCoupons.includes(couponId)) {
@@ -877,7 +880,8 @@ async function startServer() {
   });
 
   app.post("/api/user/redeem_coupon", async (req, res) => {
-    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId)) || currentUser;
+    let currentUser = users.find(u => u.id === (req.query.userId || req.body.userId));
+    if (!currentUser) return res.status(404).json({ error: "User not found" });
     const userIndex = users.findIndex(u => u.id === currentUser.id);
     const { couponId, cost } = req.body;
     if(currentUser.points >= cost) {
