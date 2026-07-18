@@ -6,17 +6,48 @@ import { Partner, Category } from '../types';
 import { cn } from '../lib/utils';
 import { MapPin, Utensils, Moon, Bed, Heart, Star, Compass } from 'lucide-react';
 
-// Canggu center coordinates
-const CENTER_LAT = -8.6478;
-const CENTER_LNG = 115.1385;
-const SCALE = 0.035; // Scaling factor for meter coordinates to 3D world units
+// Dynamic coordinate computation based on partners list to fit on the 3D island
+interface CoordinateSystem {
+  centerLat: number;
+  centerLng: number;
+  scale: number;
+}
 
-// Helper to convert Lat/Lng to 3D positions (X, Z) relative to center
-const get3DCoords = (lat: number, lng: number) => {
-  const x = (lng - CENTER_LNG) * 111000 * Math.cos(CENTER_LAT * Math.PI / 180) * SCALE;
-  const z = -(lat - CENTER_LAT) * 111000 * SCALE;
+const getCoordinateSystem = (partners: Partner[]): CoordinateSystem => {
+  const lats = partners.map(p => p.latitude).filter(Boolean) as number[];
+  const lngs = partners.map(p => p.longitude).filter(Boolean) as number[];
+
+  if (lats.length === 0 || lngs.length === 0) {
+    return { centerLat: -8.6478, centerLng: 115.1385, scale: 0.015 };
+  }
+
+  // Calculate midpoints
+  const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+
+  // Find max distance in meters to size the island zoom dynamically
+  let maxDist = 1;
+  partners.forEach(p => {
+    if (!p.latitude || !p.longitude) return;
+    const dx = (p.longitude - centerLng) * 111000 * Math.cos(centerLat * Math.PI / 180);
+    const dz = -(p.latitude - centerLat) * 111000;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist > maxDist) maxDist = dist;
+  });
+
+  // We want the furthest partner to be around 14 units away from center (safely inside size 40 island)
+  const scale = 14 / maxDist;
+
+  return { centerLat, centerLng, scale };
+};
+
+// Helper to convert Lat/Lng to 3D positions (X, Z) relative to calculated center
+const get3DCoords = (lat: number, lng: number, system: CoordinateSystem) => {
+  const x = (lng - system.centerLng) * 111000 * Math.cos(system.centerLat * Math.PI / 180) * system.scale;
+  const z = -(lat - system.centerLat) * 111000 * system.scale;
   return [x, 0, z] as [number, number, number];
 };
+
 
 // Hex colors mapping
 const getCategoryHexColor = (catId: string) => {
@@ -155,15 +186,18 @@ function Building({ categoryId, color }: { categoryId: string; color: string }) 
   }
 }
 
+
 // Bouncing Marker / Building wrapper
 function PartnerBuilding3D({
   partner,
   isSelected,
-  onClick
+  onClick,
+  system
 }: {
   partner: Partner;
   isSelected: boolean;
   onClick: () => void;
+  system: CoordinateSystem;
 }) {
   const ref = useRef<THREE.Group>(null);
   const [hovered, setHovered] = useState(false);
@@ -181,7 +215,7 @@ function PartnerBuilding3D({
     }
   });
 
-  const position = get3DCoords(partner.latitude || CENTER_LAT, partner.longitude || CENTER_LNG);
+  const position = get3DCoords(partner.latitude || system.centerLat, partner.longitude || system.centerLng, system);
 
   // Category Icon component in HTML overlay
   const getIcon = () => {
@@ -286,6 +320,9 @@ interface AdventureMapProps {
 }
 
 export default function AdventureMap({ partners, selectedPartner, onSelectPartner }: AdventureMapProps) {
+  // Compute coordinate system dynamically based on partners in view
+  const system = getCoordinateSystem(partners);
+
   // Random static points on the island to generate tree props
   const [treePositions] = useState<[number, number, number][]>(() => {
     const list: [number, number, number][] = [];
@@ -342,6 +379,7 @@ export default function AdventureMap({ partners, selectedPartner, onSelectPartne
             partner={p}
             isSelected={selectedPartner?.id === p.id}
             onClick={() => onSelectPartner(p)}
+            system={system}
           />
         ))}
 
