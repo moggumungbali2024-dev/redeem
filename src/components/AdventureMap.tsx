@@ -294,20 +294,26 @@ function IslandBoard({ size = 40 }: { size?: number }) {
         <meshStandardMaterial color="#FFE082" roughness={0.9} flatShading />
       </mesh>
 
-      {/* Floating Island Soil Depth */}
+      {/* Soil depth */}
       <mesh position={[0, -0.7, 0]} receiveShadow castShadow>
         <boxGeometry args={[size + 2, 1.3, size + 2]} />
         <meshStandardMaterial color="#8D6E63" roughness={0.9} flatShading />
       </mesh>
 
-      {/* Styled cartoon road/tracks */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <planeGeometry args={[2, size - 4]} />
-        <meshBasicMaterial color="#E0E0E0" transparent opacity={0.6} />
+      {/* Winding path 1 - diagonal NW to SE */}
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 6]} position={[-3, 0.012, 2]}>
+        <planeGeometry args={[1.8, size - 6]} />
+        <meshBasicMaterial color="#E0E0E0" transparent opacity={0.65} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.012, 0]}>
-        <planeGeometry args={[size - 4, 2]} />
-        <meshBasicMaterial color="#E0E0E0" transparent opacity={0.6} />
+      {/* Winding path 2 - slightly tilted horizontal */}
+      <mesh rotation={[-Math.PI / 2, 0, -Math.PI / 10]} position={[2, 0.012, -4]}>
+        <planeGeometry args={[size - 8, 1.8]} />
+        <meshBasicMaterial color="#D6D6D6" transparent opacity={0.55} />
+      </mesh>
+      {/* Small connector path */}
+      <mesh rotation={[-Math.PI / 2, 0, Math.PI / 3]} position={[5, 0.012, 5]}>
+        <planeGeometry args={[1.4, 10]} />
+        <meshBasicMaterial color="#E8E8E8" transparent opacity={0.5} />
       </mesh>
     </group>
   );
@@ -397,6 +403,10 @@ export default function AdventureMap({ partners, selectedPartner, onSelectPartne
       <div className="absolute bottom-4 right-4 bg-white/95 border-3 border-black p-3 rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)] text-black pointer-events-none flex flex-col items-center gap-1">
         <Compass size={24} className="text-black animate-spin-slow" />
         <span className="text-[10px] font-black uppercase tracking-wider">Drag to Orbit</span>
+      </div>
+      {/* Fantasy map label */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/70 text-white border-2 border-white/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest pointer-events-none flex items-center gap-1.5">
+        <span>🗺️</span> Fantasy Island View · Switch to 2D Map for real streets
       </div>
     </div>
   );

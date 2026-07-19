@@ -90,6 +90,19 @@ export default function UserApp() {
     api.getUser().then(setUser);
     api.getEvents().then(setEvents);
     api.getActivities().then(setActivities);
+
+    // Request location permission on startup
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log('Location acquired:', pos.coords.latitude, pos.coords.longitude);
+        },
+        (err) => {
+          console.warn('Location permission denied or unavailable:', err.message);
+        },
+        { timeout: 10000, maximumAge: 60000 }
+      );
+    }
   }, []);
 
   // Trigger a simulated push notification after 4 seconds
@@ -1275,25 +1288,53 @@ function CategoryView({ partners, categories }: { partners: Partner[], categorie
         <h1 className="text-2xl font-black uppercase text-black">{category ? t(category.name) : ''}</h1>
       </div>
       
-      <div className="p-3 md:p-5 flex flex-col gap-3 md:gap-6 w-full max-w-[600px] mx-auto">
-        {filtered.map(p => (
-          <div 
-            key={p.id} 
-            onClick={() => navigate(`/partner/${p.id}`)}
-            className="bg-white p-4 rounded-[32px] shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] border-4 border-black flex flex-col gap-4 cursor-pointer active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all group"
-          >
-            <div className="relative">
-              <img src={p.logo} alt={p.name} className="w-full h-40 rounded-2xl object-cover border-4 border-black group-hover:scale-[1.02] transition-transform" />
-              <div className="absolute -bottom-4 right-4 bg-[#FDD835] border-4 border-black rounded-2xl px-3 py-1 font-black text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1">
-                <MapPin size={16} strokeWidth={3}/> {p.distance}km
+      <div className="p-3 md:p-5 flex flex-col gap-3 md:gap-4 w-full max-w-[600px] mx-auto">
+        {filtered.map(p => {
+          const activePromos = (p.promos || []).filter(pr => pr.isActive);
+          const bannerSrc = p.banner || (p.images && p.images[0]) || p.logo;
+          return (
+            <div 
+              key={p.id} 
+              onClick={() => navigate(`/partner/${p.id}`)}
+              className="bg-white rounded-[28px] shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] border-4 border-black overflow-hidden cursor-pointer active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all group"
+            >
+              {/* Banner image */}
+              <div className="relative h-40 overflow-hidden">
+                <img src={bannerSrc} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                {/* Distance badge */}
+                <div className="absolute bottom-3 right-3 bg-[#FDD835] border-3 border-black rounded-xl px-2.5 py-1 font-black text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1">
+                  <MapPin size={12} strokeWidth={3}/> {p.distance}km
+                </div>
+                {/* Promo count badge */}
+                {activePromos.length > 0 && (
+                  <div className="absolute top-3 right-3 bg-[#E53935] border-3 border-black rounded-xl px-2.5 py-1 font-black text-xs text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] flex items-center gap-1">
+                    🏷️ {activePromos.length} Promo
+                  </div>
+                )}
+              </div>
+              {/* Info row: logo + name + desc */}
+              <div className="p-3 flex gap-3 items-start">
+                <img 
+                  src={p.logo} 
+                  alt={p.name} 
+                  className="w-12 h-12 rounded-xl border-3 border-black object-cover shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" 
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-black text-black text-lg uppercase leading-tight truncate">{p.name}</h3>
+                  <p className="text-xs font-bold text-gray-500 line-clamp-1 mt-0.5 leading-snug">{t(p.description)}</p>
+                  {activePromos.length > 0 && (
+                    <div className="flex gap-1 mt-1.5 flex-wrap">
+                      {activePromos.slice(0, 2).map(pr => (
+                        <span key={pr.id} className="bg-[#FDD835] border-2 border-black font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md">{pr.code}</span>
+                      ))}
+                      {activePromos.length > 2 && <span className="text-[10px] font-black text-stone-400">+{activePromos.length - 2} more</span>}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex-1 flex flex-col mt-2">
-              <h3 className="font-black text-black text-2xl mb-1 uppercase leading-none">{p.name}</h3>
-              <p className="text-sm font-bold text-gray-600 line-clamp-2 mt-1 leading-snug">{t(p.description)}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <div className="text-center p-10 text-black font-black uppercase tracking-widest bg-gray-200 border-4 border-black rounded-3xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">No places found.</div>
         )}
@@ -1459,6 +1500,44 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
             <Globe size={16} strokeWidth={3} /> WEB
           </button>
         </div>
+
+        {/* Active Promos Section */}
+        {(() => {
+          const activePromos = (partner.promos || []).filter(pr => pr.isActive);
+          if (activePromos.length === 0) return null;
+          return (
+            <div className="flex flex-col gap-2.5">
+              <h3 className="font-black text-lg uppercase text-black tracking-wider flex items-center gap-2">
+                🏷️ Promo Aktif
+              </h3>
+              <div className="flex flex-col gap-2">
+                {activePromos.map(pr => (
+                  <div key={pr.id} className="bg-white border-[3px] border-black rounded-2xl p-4 shadow-[3px_3px_0px_rgba(0,0,0,1)] flex items-start gap-3">
+                    <div className="bg-[#FDD835] border-2 border-black rounded-xl px-3 py-2 shrink-0 text-center">
+                      <span className="font-mono font-black text-sm uppercase block">{pr.code}</span>
+                      <span className="text-[9px] font-black uppercase text-stone-600">KODE</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-black text-sm uppercase leading-tight">{pr.name}</p>
+                      <p className="text-xs font-bold text-[#E53935] mt-0.5">
+                        {pr.type === 'discount_percent' ? `${pr.discountValue}% off` 
+                          : pr.type === 'discount_nominal' ? `Rp${(pr.discountValue || 0).toLocaleString()} off`
+                          : pr.type === 'free' ? 'Free Item'
+                          : pr.type === 'bogo' ? 'Buy 1 Get 1'
+                          : pr.type === 'cashback' ? `${pr.discountValue}% cashback`
+                          : 'Special Promo'}
+                      </p>
+                      <p className="text-[10px] font-bold text-stone-400 mt-0.5">
+                        Berlaku s/d {new Date(pr.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                      {pr.terms && <p className="text-[10px] font-bold text-stone-500 mt-1 bg-stone-50 border border-stone-200 p-1.5 rounded-lg">{pr.terms}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Coupons - Sleek Ticket Style */}
         {partner.coupons && partner.coupons.length > 0 && (
