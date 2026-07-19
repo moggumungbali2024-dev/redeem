@@ -143,6 +143,7 @@ export interface Activity {
 }
 
 export interface AppSettings {
+  id?: string;
   splashLogo: string;
   adminId?: string;
   adminPassword?: string;

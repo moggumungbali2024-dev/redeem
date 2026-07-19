@@ -7,6 +7,7 @@ import { Partner, Category, AppSettings } from "./src/types";
 
 // In-memory DB
 let settings: AppSettings = {
+  id: "default",
   splashLogo: "/favicon.png",
   adminId: "admin",
   adminPassword: "admin123"
