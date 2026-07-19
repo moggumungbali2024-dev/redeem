@@ -506,6 +506,9 @@ async function syncFromSupabase() {
   try {
     // 1. Settings
     const { data: sData, error: sErr } = await supabase.from('rnf_settings').select('*');
+    if (sErr) {
+      console.error("Supabase Sync: Error fetching settings table:", sErr.message, sErr.details || "");
+    }
     if (!sErr && sData && sData.length > 0) {
       settings = sData[0];
       console.log("Synced settings from Supabase");
@@ -515,6 +518,9 @@ async function syncFromSupabase() {
 
     // 2. Categories
     const { data: catData, error: catErr } = await supabase.from('rnf_categories').select('*');
+    if (catErr) {
+      console.error("Supabase Sync: Error fetching categories table:", catErr.message, catErr.details || "");
+    }
     if (!catErr && catData && catData.length > 0) {
       categories = catData;
       console.log("Synced categories from Supabase");
@@ -524,6 +530,9 @@ async function syncFromSupabase() {
 
     // 3. Partners
     const { data: pData, error: pErr } = await supabase.from('rnf_partners').select('*');
+    if (pErr) {
+      console.error("Supabase Sync: Error fetching partners table. Verify if rnf_partners columns (vendorLoginWhatsapp, vendorPassword, approvalStatus, promos, videoUrl) exist in Supabase:", pErr.message, pErr.details || "");
+    }
     if (!pErr && pData && pData.length > 0) {
       partners = pData;
       console.log("Synced partners from Supabase");
@@ -533,6 +542,9 @@ async function syncFromSupabase() {
 
     // 4. Users
     const { data: uData, error: uErr } = await supabase.from('rnf_users').select('*');
+    if (uErr) {
+      console.error("Supabase Sync: Error fetching users table:", uErr.message, uErr.details || "");
+    }
     if (!uErr && uData && uData.length > 0) {
       users = uData;
       console.log("Synced users from Supabase");
@@ -542,6 +554,9 @@ async function syncFromSupabase() {
 
     // 5. Events
     const { data: eData, error: eErr } = await supabase.from('rnf_events').select('*');
+    if (eErr) {
+      console.error("Supabase Sync: Error fetching events table. Verify if partnerId column exists in Supabase rnf_events:", eErr.message, eErr.details || "");
+    }
     if (!eErr && eData && eData.length > 0) {
       events = eData;
       console.log("Synced events from Supabase");
@@ -551,6 +566,9 @@ async function syncFromSupabase() {
 
     // 6. FAQs
     const { data: faqData, error: faqErr } = await supabase.from('rnf_faqs').select('*');
+    if (faqErr) {
+      console.error("Supabase Sync: Error fetching faqs table:", faqErr.message, faqErr.details || "");
+    }
     if (!faqErr && faqData && faqData.length > 0) {
       faqs = faqData;
       console.log("Synced faqs from Supabase");
@@ -560,6 +578,9 @@ async function syncFromSupabase() {
 
     // 7. Redemptions
     const { data: rData, error: rErr } = await supabase.from('rnf_redemptions').select('*');
+    if (rErr) {
+      console.error("Supabase Sync: Error fetching redemptions table:", rErr.message, rErr.details || "");
+    }
     if (!rErr && rData && rData.length > 0) {
       redemptions = rData;
       console.log("Synced redemptions from Supabase");
@@ -569,6 +590,9 @@ async function syncFromSupabase() {
 
     // 8. Activities
     const { data: actData, error: actErr } = await supabase.from('rnf_activities').select('*');
+    if (actErr) {
+      console.error("Supabase Sync: Error fetching activities table:", actErr.message, actErr.details || "");
+    }
     if (!actErr && actData && actData.length > 0) {
       activities = actData;
       console.log("Synced activities from Supabase");
@@ -658,7 +682,10 @@ async function startServer() {
   });
 
   app.get("/favicon.png", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public/favicon.png"));
+    const faviconPath = process.env.NODE_ENV === "production"
+      ? path.join(process.cwd(), "dist/favicon.png")
+      : path.join(process.cwd(), "public/favicon.png");
+    res.sendFile(faviconPath);
   });
 
   app.get("/api/settings", (req, res) => {

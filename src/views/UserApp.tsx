@@ -5,15 +5,40 @@ import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api';
 import { Partner, Category, User, AppEvent, Activity, Faq } from '../types';
 import { cn, triggerHaptic } from '../lib/utils';
-import { Scanner } from '@yudiel/react-qr-scanner';
-import { useI18n, Language } from '../i18n';
-import ProfileWizard from './ProfileWizard';
-import PointAnimation from '../components/PointAnimation';
-import { uploadImage } from '../supabase';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import AdventureMap from '../components/AdventureMap';
+
+const QRScannerComponent = React.lazy(() => import('../components/QRScannerComponent'));
+import { useI18n, Language } from '../i18n';
+import ProfileWizard from './ProfileWizard';
+import PointAnimation from '../components/PointAnimation';
+import { uploadImage } from '../supabase';
+
+class ScannerErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true };
+  }
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Scanner crashed:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 text-center text-xs font-black text-[#FF8A80] uppercase tracking-wider flex flex-col items-center gap-2">
+          <span>⚠️ Kamera tidak didukung pada browser ini.</span>
+          <span className="text-[10px] text-stone-400 normal-case">Gunakan tombol simulasi di bawah untuk menguji penukaran kupon.</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 
 // Fix leaflet default icon issue
@@ -2531,12 +2556,11 @@ function ScanView({ user, updateUser, partners }: { user: User, updateUser: (upd
         <h2 className="text-2xl font-black uppercase mb-8 tracking-widest text-center">{t({ ko: '가맹점 QR 스캔', en: 'Scan Partner QR', id: 'Pindai QR Mitra' })}</h2>
         
         <div className="w-full max-w-sm aspect-square bg-gray-800 rounded-3xl border-8 border-white overflow-hidden relative shadow-[0_0_0_8px_rgba(0,0,0,1)] flex items-center justify-center">
-            {/* Using mock scanner or library here */}
-            <Scanner 
-              onScan={(result) => handleScan(result[0].rawValue)} 
-              onError={(e) => console.error(e)} 
-              components={{ finder: false, audio: false }}
-            />
+            <ScannerErrorBoundary>
+              <React.Suspense fallback={<div className="text-xs uppercase font-black text-stone-400 animate-pulse">Memuat Kamera...</div>}>
+                <QRScannerComponent onScan={handleScan} />
+              </React.Suspense>
+            </ScannerErrorBoundary>
             {/* Animated Scanning Line */}
             <motion.div 
                animate={{ top: ['0%', '100%', '0%'] }} 
