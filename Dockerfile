@@ -3,6 +3,14 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Accept build arguments for Supabase
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+# Set as environment variables for Vite build process
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+
 # Copy package files
 COPY package.json package-lock.json* bun.lock* ./
 
@@ -25,6 +33,13 @@ RUN ls -la dist/ && test -f dist/favicon.png && echo "favicon.png OK" || echo "W
 FROM node:22-alpine AS runner
 
 WORKDIR /app
+
+# Accept build arguments for Supabase in runner
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
 # Copy built assets from builder (dist/ already contains public/ files from Vite build)
 COPY --from=builder /app/dist ./dist

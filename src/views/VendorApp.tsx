@@ -8,7 +8,7 @@ import {
   MapPin, Clock, Instagram, Phone, Globe, Upload, X,
   TrendingUp, Bell, Download, RefreshCw, Sparkles, Ticket, Printer,
   Tag, Percent, Gift, ChevronRight, ChevronLeft, Eye, EyeOff, ToggleLeft, ToggleRight,
-  Video
+  Video, Utensils, Link, Star
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, 
@@ -326,7 +326,7 @@ export default function VendorApp() {
     return localStorage.getItem('m_vendor_id') || null;
   });
   
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scan' | 'qr_generator' | 'profile' | 'events' | 'promos'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scan' | 'qr_generator' | 'profile' | 'events' | 'promos' | 'menu'>('dashboard');
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [promos, setPromos] = useState<Promo[]>([]);
 
@@ -419,6 +419,17 @@ export default function VendorApp() {
   const [vendorAdTextKo, setVendorAdTextKo] = useState('');
   const [vendorAdTextEn, setVendorAdTextEn] = useState('');
   const [vendorAdTextId, setVendorAdTextId] = useState('');
+
+  // Menu Manager state
+  const [vendorMenuUrl, setVendorMenuUrl] = useState('');
+  const [vendorMenuItems, setVendorMenuItems] = useState<{name: string; price: string; image?: string; description?: string}[]>([]);
+  const [menuItemModalOpen, setMenuItemModalOpen] = useState(false);
+  const [editingMenuItemIdx, setEditingMenuItemIdx] = useState<number | null>(null);
+  const [menuItemName, setMenuItemName] = useState('');
+  const [menuItemPrice, setMenuItemPrice] = useState('');
+  const [menuItemImage, setMenuItemImage] = useState('');
+  const [menuItemDesc, setMenuItemDesc] = useState('');
+  const [savingMenu, setSavingMenu] = useState(false);
   
   // Managing Events State
   const [eventModalOpen, setEventModalOpen] = useState(false);
@@ -498,6 +509,13 @@ export default function VendorApp() {
       setVendorAdTextKo(activeVendor.adText?.ko || '');
       setVendorAdTextEn(activeVendor.adText?.en || '');
       setVendorAdTextId(activeVendor.adText?.id || '');
+      setVendorMenuUrl(activeVendor.menuUrl || '');
+      setVendorMenuItems((activeVendor.bestsellers || []).map(b => ({
+        name: typeof b.name === 'string' ? b.name : (b.name?.en || b.name?.id || b.name?.ko || ''),
+        price: b.price,
+        image: b.image,
+        description: b.description,
+      })));
     }
   }, [activeVendor]);
 
@@ -902,12 +920,22 @@ export default function VendorApp() {
         <button 
           onClick={() => { triggerHaptic('tap'); setActiveTab('promos'); }}
           className={cn(
-            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
+            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider border-r-4 border-black transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
             activeTab === 'promos' ? "bg-[#FDD835] text-black" : "text-gray-500 hover:text-black"
           )}
         >
           <Tag size={14} strokeWidth={2.5} />
           Promos
+        </button>
+        <button 
+          onClick={() => { triggerHaptic('tap'); setActiveTab('menu'); }}
+          className={cn(
+            "flex-1 py-4.5 font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 min-w-[100px]", 
+            activeTab === 'menu' ? "bg-[#FDD835] text-black" : "text-gray-500 hover:text-black"
+          )}
+        >
+          <Utensils size={14} strokeWidth={2.5} />
+          Menu
         </button>
       </div>
 
@@ -1799,6 +1827,251 @@ export default function VendorApp() {
           </div>
         </div>
       )}
+
+      {/* MENU MANAGER TAB */}
+      {activeTab === 'menu' && (
+        <div className="p-4 flex-1 overflow-y-auto max-w-[800px] mx-auto w-full pb-24">
+          <div className="flex flex-col gap-5">
+            {/* Header */}
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-2xl font-black uppercase">Menu Manager</h2>
+                <p className="text-xs font-bold text-stone-500">Kelola menu unggulan & link menu digitalmu</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingMenuItemIdx(null);
+                  setMenuItemName('');
+                  setMenuItemPrice('');
+                  setMenuItemImage('');
+                  setMenuItemDesc('');
+                  setMenuItemModalOpen(true);
+                }}
+                className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5"
+              >
+                <Plus size={14} strokeWidth={3}/> Tambah Menu
+              </button>
+            </div>
+
+            {/* Digital Menu URL */}
+            <div className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Link size={16} strokeWidth={3} />
+                <h3 className="font-black text-base uppercase">Link Menu Digital</h3>
+              </div>
+              <p className="text-xs font-bold text-stone-500">Paste link menu PDF, Google Drive, Canva, atau Instagram kamu</p>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={vendorMenuUrl}
+                  onChange={e => setVendorMenuUrl(e.target.value)}
+                  placeholder="https://bit.ly/menu-restoran-saya"
+                  className="flex-1 border-4 border-black rounded-xl p-3 font-bold text-sm bg-[#FFF8F0] focus:outline-none"
+                />
+                <button
+                  onClick={async () => {
+                    if (!selectedVendorId) return;
+                    setSavingMenu(true);
+                    await api.updatePartner(selectedVendorId, { menuUrl: vendorMenuUrl });
+                    await loadData();
+                    setSavingMenu(false);
+                    showToast('Link menu digital berhasil disimpan! 🔗');
+                  }}
+                  className="bg-black text-white border-4 border-black px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none"
+                >
+                  {savingMenu ? '...' : 'Simpan'}
+                </button>
+              </div>
+              {vendorMenuUrl && (
+                <a href={vendorMenuUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-black text-[#1E88E5] underline flex items-center gap-1">
+                  <Eye size={12} /> Preview link menu
+                </a>
+              )}
+            </div>
+
+            {/* Menu Items (Bestsellers/Highlights) */}
+            <div className="flex flex-col gap-3">
+              <h3 className="font-black text-base uppercase flex items-center gap-2">
+                <Star size={16} strokeWidth={3} fill="#FDD835" />
+                Menu Unggulan ({vendorMenuItems.length} item)
+              </h3>
+
+              {vendorMenuItems.length === 0 ? (
+                <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
+                  <div className="text-5xl mb-3">🍽️</div>
+                  <h3 className="font-black uppercase">Belum Ada Menu</h3>
+                  <p className="text-sm text-stone-500 font-bold mt-1">Tambahkan menu unggulanmu untuk menarik pelanggan!</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {vendorMenuItems.map((item, idx) => (
+                    <div key={idx} className="bg-white border-4 border-black rounded-2xl p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl border-2 border-black shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 bg-[#FDD835] border-2 border-black rounded-xl shrink-0 flex items-center justify-center text-2xl">🍽️</div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-black text-base leading-tight truncate">{item.name}</p>
+                        {item.description && <p className="text-xs font-bold text-stone-500 truncate">{item.description}</p>}
+                        <span className="bg-[#FDD835] border-2 border-black font-black text-xs px-2 py-0.5 rounded-lg inline-block mt-1">{item.price}</span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <button
+                          onClick={() => {
+                            setEditingMenuItemIdx(idx);
+                            setMenuItemName(item.name);
+                            setMenuItemPrice(item.price);
+                            setMenuItemImage(item.image || '');
+                            setMenuItemDesc(item.description || '');
+                            setMenuItemModalOpen(true);
+                          }}
+                          className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100"
+                        >
+                          <Edit3 size={14} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Hapus menu ini?')) return;
+                            const updated = vendorMenuItems.filter((_, i) => i !== idx);
+                            setVendorMenuItems(updated);
+                            await api.updatePartner(selectedVendorId!, {
+                              bestsellers: updated.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
+                            });
+                            await loadData();
+                            showToast('Menu dihapus.');
+                          }}
+                          className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Save Menu Items Button */}
+              {vendorMenuItems.length > 0 && (
+                <button
+                  onClick={async () => {
+                    if (!selectedVendorId) return;
+                    setSavingMenu(true);
+                    await api.updatePartner(selectedVendorId, {
+                      bestsellers: vendorMenuItems.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
+                    });
+                    await loadData();
+                    setSavingMenu(false);
+                    showToast('Menu unggulan tersimpan! 🍽️');
+                  }}
+                  className="w-full bg-black text-[#FDD835] border-4 border-black py-4 rounded-2xl font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center justify-center gap-2"
+                >
+                  <CheckCircle size={16} strokeWidth={3} />
+                  {savingMenu ? 'Menyimpan...' : 'Simpan Semua Menu'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Menu Item Modal */}
+      <AnimatePresence>
+        {menuItemModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 40 }}
+              className="bg-white border-4 border-black rounded-[32px] w-full max-w-md shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative p-6 flex flex-col gap-4"
+            >
+              <button type="button" onClick={() => setMenuItemModalOpen(false)} className="absolute top-4 right-4 p-2 bg-white border-2 border-black rounded-full hover:bg-stone-100 shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                <X size={16} strokeWidth={3} />
+              </button>
+              <h3 className="font-black text-xl uppercase">{editingMenuItemIdx !== null ? 'Edit Menu Item 🍽️' : 'Tambah Menu Item 🍽️'}</h3>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs font-black uppercase block mb-1">Nama Menu *</label>
+                  <input
+                    value={menuItemName}
+                    onChange={e => setMenuItemName(e.target.value)}
+                    placeholder="e.g. Signature Iced Latte"
+                    className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-black uppercase block mb-1">Harga *</label>
+                    <input
+                      value={menuItemPrice}
+                      onChange={e => setMenuItemPrice(e.target.value)}
+                      placeholder="45K IDR"
+                      className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-black uppercase block mb-1">Label / Catatan</label>
+                    <input
+                      value={menuItemDesc}
+                      onChange={e => setMenuItemDesc(e.target.value)}
+                      placeholder="Best Seller"
+                      className="w-full border-4 border-black p-3.5 rounded-xl font-bold bg-[#FFF8F0] focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-black uppercase block mb-1">Foto Menu (URL atau Upload)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={menuItemImage}
+                      onChange={e => setMenuItemImage(e.target.value)}
+                      placeholder="https://..."
+                      className="flex-1 border-4 border-black p-3 rounded-xl font-bold text-sm bg-[#FFF8F0] focus:outline-none"
+                    />
+                    <label className="bg-[#FDD835] border-4 border-black px-3 rounded-xl font-black text-xs uppercase cursor-pointer flex items-center gap-1 shadow-[2px_2px_0px_rgba(0,0,0,1)] whitespace-nowrap">
+                      <Upload size={13} /> Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const url = await uploadImage(file, `menu/${selectedVendorId}`);
+                          if (url) setMenuItemImage(url);
+                        }
+                      }} />
+                    </label>
+                  </div>
+                  {menuItemImage && <img src={menuItemImage} alt="preview" className="mt-2 w-full h-32 object-cover rounded-xl border-2 border-black" />}
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!menuItemName || !menuItemPrice) return;
+                    const newItem = { name: menuItemName, price: menuItemPrice, image: menuItemImage || undefined, description: menuItemDesc || undefined };
+                    let updated: typeof vendorMenuItems;
+                    if (editingMenuItemIdx !== null) {
+                      updated = vendorMenuItems.map((m, i) => i === editingMenuItemIdx ? newItem : m);
+                    } else {
+                      updated = [...vendorMenuItems, newItem];
+                    }
+                    setVendorMenuItems(updated);
+                    setSavingMenu(true);
+                    await api.updatePartner(selectedVendorId!, {
+                      bestsellers: updated.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
+                    });
+                    await loadData();
+                    setSavingMenu(false);
+                    setMenuItemModalOpen(false);
+                    showToast(editingMenuItemIdx !== null ? 'Menu diperbarui! ✅' : 'Menu baru ditambahkan! 🍽️');
+                  }}
+                  className="w-full bg-black text-[#FDD835] border-4 border-black py-4 rounded-2xl font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1"
+                >
+                  {savingMenu ? 'Menyimpan...' : (editingMenuItemIdx !== null ? '✅ Simpan Perubahan' : '➕ Tambah ke Menu')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Promo Modal */}
       <AnimatePresence>

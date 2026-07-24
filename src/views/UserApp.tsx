@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, useParams } from 'react-router-dom';
-import { QrCode, ChevronLeft, LogOut, Scan, Plus, Minus, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet, Compass } from 'lucide-react';
+import { QrCode, ChevronLeft, LogOut, Scan, Plus, Minus, MapPin, Utensils, Moon, Bed, Heart, Phone, ArrowLeft, ArrowRight, Instagram, MessageCircle, Globe, Ticket, Clock, Star, Globe2, Search, X, History, TrendingUp, TrendingDown, Gift, Bell, HelpCircle, FileSpreadsheet, Compass, BookOpen, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../api';
 import { Partner, Category, User, AppEvent, Activity, Faq } from '../types';
@@ -1362,6 +1362,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
   const [userRating, setUserRating] = useState<number>(5);
   const [userComment, setUserComment] = useState<string>('');
   const [hasReviewed, setHasReviewed] = useState<boolean>(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (!partner) return <div className="p-5 font-black text-black">Not found</div>;
 
@@ -1499,6 +1500,14 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
           <button onClick={() => handleLink('website', partner.website)} className="flex-1 py-2 px-3 rounded-xl bg-[#FDD835] hover:bg-[#FBC02D] text-black border-[3px] border-black flex items-center justify-center gap-1.5 font-black text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all">
             <Globe size={16} strokeWidth={3} /> WEB
           </button>
+          {(partner.bestsellers?.length > 0 || partner.menuUrl) && (
+            <button
+              onClick={() => { triggerHaptic('tap'); setMenuOpen(true); }}
+              className="flex-1 py-2 px-3 rounded-xl bg-black text-[#FDD835] border-[3px] border-black flex items-center justify-center gap-1.5 font-black text-xs shadow-[3px_3px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none transition-all"
+            >
+              <BookOpen size={16} strokeWidth={3} /> MENU
+            </button>
+          )}
         </div>
 
         {/* Active Promos Section */}
@@ -1770,6 +1779,97 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
         )}
       </AnimatePresence>
 
+      {/* Menu Modal */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center"
+            onClick={() => setMenuOpen(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#FFF8F0] border-t-[4px] sm:border-[4px] border-black rounded-t-[36px] sm:rounded-[36px] w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.3)]"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b-[3px] border-black shrink-0">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Utensils size={20} strokeWidth={3} />
+                    <h3 className="font-black text-xl uppercase">Menu</h3>
+                  </div>
+                  <p className="text-xs font-bold text-stone-500 mt-0.5">{partner.name}</p>
+                </div>
+                <button onClick={() => setMenuOpen(false)} className="p-2 bg-white border-2 border-black rounded-full shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                  <X size={18} strokeWidth={3} />
+                </button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+                {/* Digital menu link */}
+                {partner.menuUrl && (
+                  <a
+                    href={partner.menuUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-3 bg-black text-[#FDD835] border-[3px] border-black rounded-2xl px-5 py-4 font-black text-sm uppercase shadow-[4px_4px_0px_rgba(0,0,0,0.3)] active:translate-y-1 active:shadow-none transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={18} strokeWidth={3} />
+                      Lihat Menu Digital Lengkap
+                    </div>
+                    <ExternalLink size={16} strokeWidth={3} />
+                  </a>
+                )}
+
+                {/* Bestsellers list */}
+                {partner.bestsellers && partner.bestsellers.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <h4 className="font-black text-sm uppercase text-stone-500 tracking-wider">⭐ Menu Unggulan</h4>
+                    {partner.bestsellers.map((item, i) => (
+                      <div key={i} className="flex gap-3 items-center p-3.5 rounded-[20px] border-[3px] border-black bg-white shadow-[3px_3px_0px_rgba(0,0,0,1)]">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={t(item.name)}
+                            className="w-16 h-16 object-cover rounded-xl border-2 border-black shrink-0 shadow-[1px_1px_0px_rgba(0,0,0,1)]"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-[#FDD835] border-2 border-black rounded-xl shrink-0 flex items-center justify-center font-black text-2xl">
+                            🍽️
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-black text-black text-base leading-tight truncate">{t(item.name)}</h4>
+                          {item.description && (
+                            <p className="text-xs font-bold text-stone-500 truncate">{item.description}</p>
+                          )}
+                        </div>
+                        <span className="font-black text-black bg-[#FDD835] text-xs px-3 py-1.5 border-2 border-black rounded-lg shadow-[1.5px_1.5px_0px_rgba(0,0,0,1)] whitespace-nowrap shrink-0">
+                          {item.price}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!partner.bestsellers?.length && !partner.menuUrl && (
+                  <div className="text-center py-12 text-stone-400">
+                    <div className="text-5xl mb-3">🍽️</div>
+                    <p className="font-black uppercase">Menu belum tersedia</p>
+                    <p className="text-sm font-bold mt-1">Vendor belum mengisi menu</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
 }
@@ -1979,7 +2079,21 @@ function WalletView({ user, partners }: { user: User, partners: Partner[] }) {
   };
     
   // Gather all saved coupons from user
-  const allCoupons = partners.flatMap(p => p.coupons.map(c => ({...c, partnerName: p.name, partnerId: p.id})));
+  const allCoupons = partners.flatMap(p => {
+    const cList = [...(p.coupons || [])];
+    (p.promos || []).filter(pr => pr.isActive).forEach(pr => {
+      if (!cList.some(c => c.id === pr.id || c.code === pr.code)) {
+        cList.push({
+          id: pr.id,
+          type: pr.type === 'free' ? 'free' : 'redeem',
+          title: { ko: pr.name, en: pr.name, id: pr.name },
+          code: pr.code,
+          cost: pr.discountValue || 0
+        });
+      }
+    });
+    return cList.map(c => ({ ...c, partnerName: p.name, partnerId: p.id }));
+  });
   const saved = allCoupons.filter(c => user.savedCoupons.includes(c.id));
   const redeemable = allCoupons.filter(c => c.type === 'redeem');
 

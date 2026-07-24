@@ -42,7 +42,7 @@ export interface Partner {
   instagram: string;
   whatsapp: string;
   website: string;
-  bestsellers: { name: LocalizedString; price: string; image?: string }[];
+  bestsellers: { name: LocalizedString; price: string; image?: string; description?: string }[];
   coupons: Coupon[];
   images: string[];
   googleMapsUrl?: string;
@@ -54,6 +54,7 @@ export interface Partner {
   adText?: LocalizedString;
   banner?: string;
   videoUrl?: string;
+  menuUrl?: string;
   // Vendor auth & approval
   vendorPassword?: string;
   vendorLoginWhatsapp?: string;

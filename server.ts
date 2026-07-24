@@ -1,9 +1,10 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { createServer as createViteServer } from "vite";
 
 // Types
-import { Partner, Category, AppSettings } from "./src/types";
+import { Partner, Category, AppSettings, Coupon } from "./src/types";
 
 // In-memory DB
 let settings: AppSettings = {
@@ -492,8 +493,8 @@ dotenv.config();
 
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
 const hasSupabase = !!(supabaseUrl && supabaseAnonKey);
 const supabase = hasSupabase ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
@@ -532,13 +533,11 @@ async function syncFromSupabase() {
     // 3. Partners
     const { data: pData, error: pErr } = await supabase.from('rnf_partners').select('*');
     if (pErr) {
-      console.error("Supabase Sync: Error fetching partners table. Verify if rnf_partners columns (vendorLoginWhatsapp, vendorPassword, approvalStatus, promos, videoUrl) exist in Supabase:", pErr.message, pErr.details || "");
+      console.error("Supabase Sync: Error fetching partners table:", pErr.message, pErr.details || "");
     }
-    if (!pErr && pData && pData.length > 0) {
+    if (!pErr && pData) {
       partners = pData;
-      console.log("Synced partners from Supabase");
-    } else if (!pErr) {
-      await supabase.from('rnf_partners').insert(partners);
+      console.log(`Synced ${pData.length} partners from Supabase`);
     }
 
     // 4. Users
@@ -546,23 +545,19 @@ async function syncFromSupabase() {
     if (uErr) {
       console.error("Supabase Sync: Error fetching users table:", uErr.message, uErr.details || "");
     }
-    if (!uErr && uData && uData.length > 0) {
+    if (!uErr && uData) {
       users = uData;
-      console.log("Synced users from Supabase");
-    } else if (!uErr) {
-      await supabase.from('rnf_users').insert(users);
+      console.log(`Synced ${uData.length} users from Supabase`);
     }
 
     // 5. Events
     const { data: eData, error: eErr } = await supabase.from('rnf_events').select('*');
     if (eErr) {
-      console.error("Supabase Sync: Error fetching events table. Verify if partnerId column exists in Supabase rnf_events:", eErr.message, eErr.details || "");
+      console.error("Supabase Sync: Error fetching events table:", eErr.message, eErr.details || "");
     }
-    if (!eErr && eData && eData.length > 0) {
+    if (!eErr && eData) {
       events = eData;
-      console.log("Synced events from Supabase");
-    } else if (!eErr) {
-      await supabase.from('rnf_events').insert(events);
+      console.log(`Synced ${eData.length} events from Supabase`);
     }
 
     // 6. FAQs
@@ -570,11 +565,9 @@ async function syncFromSupabase() {
     if (faqErr) {
       console.error("Supabase Sync: Error fetching faqs table:", faqErr.message, faqErr.details || "");
     }
-    if (!faqErr && faqData && faqData.length > 0) {
+    if (!faqErr && faqData) {
       faqs = faqData;
-      console.log("Synced faqs from Supabase");
-    } else if (!faqErr) {
-      await supabase.from('rnf_faqs').insert(faqs);
+      console.log(`Synced ${faqData.length} faqs from Supabase`);
     }
 
     // 7. Redemptions
@@ -582,11 +575,9 @@ async function syncFromSupabase() {
     if (rErr) {
       console.error("Supabase Sync: Error fetching redemptions table:", rErr.message, rErr.details || "");
     }
-    if (!rErr && rData && rData.length > 0) {
+    if (!rErr && rData) {
       redemptions = rData;
-      console.log("Synced redemptions from Supabase");
-    } else if (!rErr && redemptions.length > 0) {
-      await supabase.from('rnf_redemptions').insert(redemptions);
+      console.log(`Synced ${rData.length} redemptions from Supabase`);
     }
 
     // 8. Activities
@@ -594,20 +585,62 @@ async function syncFromSupabase() {
     if (actErr) {
       console.error("Supabase Sync: Error fetching activities table:", actErr.message, actErr.details || "");
     }
-    if (!actErr && actData && actData.length > 0) {
+    if (!actErr && actData) {
       activities = actData;
-      console.log("Synced activities from Supabase");
-    } else if (!actErr && activities.length > 0) {
-      await supabase.from('rnf_activities').insert(activities);
+      console.log(`Synced ${actData.length} activities from Supabase`);
     }
 
     console.log("Supabase initialization and sync completed successfully.");
   } catch (err) {
-    console.error("Failed to sync from Supabase. Defaulting to in-memory cache:", err);
+    console.error("Failed to sync from Supabase. Defaulting to in-memory/local cache:", err);
+  }
+}
+
+const LOCAL_DB_FILE = path.join(process.cwd(), "data_db.json");
+
+function loadFromLocalDB() {
+  try {
+    if (fs.existsSync(LOCAL_DB_FILE)) {
+      const raw = fs.readFileSync(LOCAL_DB_FILE, "utf-8");
+      const data = JSON.parse(raw);
+      if (data.settings) settings = data.settings;
+      if (Array.isArray(data.categories) && data.categories.length > 0) categories = data.categories;
+      if (Array.isArray(data.partners)) partners = data.partners;
+      if (Array.isArray(data.users)) users = data.users;
+      if (Array.isArray(data.events)) events = data.events;
+      if (Array.isArray(data.faqs)) faqs = data.faqs;
+      if (Array.isArray(data.redemptions)) redemptions = data.redemptions;
+      if (Array.isArray(data.activities)) activities = data.activities;
+      console.log(`[DB] Loaded data from local file data_db.json (${users.length} users, ${partners.length} partners).`);
+    } else {
+      console.log("[DB] data_db.json does not exist yet. Initializing with default seed data...");
+      saveToLocalDB();
+    }
+  } catch (err) {
+    console.error("[DB] Error loading local data_db.json:", err);
+  }
+}
+
+function saveToLocalDB() {
+  try {
+    const data = {
+      settings,
+      categories,
+      partners,
+      users,
+      events,
+      faqs,
+      redemptions,
+      activities
+    };
+    fs.writeFileSync(LOCAL_DB_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[DB] Error saving to local data_db.json:", err);
   }
 }
 
 async function dbUpsert(table: string, data: any) {
+  saveToLocalDB();
   if (!supabase) return;
   try {
     const { error } = await supabase.from(table).upsert(data);
@@ -618,6 +651,7 @@ async function dbUpsert(table: string, data: any) {
 }
 
 async function dbDelete(table: string, id: string) {
+  saveToLocalDB();
   if (!supabase) return;
   try {
     const { error } = await supabase.from(table).delete().eq('id', id);
@@ -631,8 +665,14 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Run initial sync from Supabase
+  // 1. Load local file DB
+  loadFromLocalDB();
+
+  // 2. Run sync from Supabase if available
   await syncFromSupabase();
+
+  // 3. Save current state to local DB
+  saveToLocalDB();
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -640,22 +680,20 @@ async function startServer() {
   // --- API ROUTES ---
 
   app.post("/api/admin/reset", async (req, res) => {
-    // 1. Reset in-memory states
+    // 1. Reset in-memory states to completely clean 0 state (no dummy data)
     settings = JSON.parse(defaultSnapshots.settings);
     categories = JSON.parse(defaultSnapshots.categories);
-    partners = JSON.parse(defaultSnapshots.partners);
-    users = JSON.parse(defaultSnapshots.users);
-    redemptions = JSON.parse(defaultSnapshots.redemptions);
-    events = JSON.parse(defaultSnapshots.events);
-    faqs = JSON.parse(defaultSnapshots.faqs);
-    activities = JSON.parse(defaultSnapshots.activities);
+    partners = [];
+    users = [];
+    redemptions = [];
+    events = [];
+    faqs = [];
+    activities = [];
     clicks = {};
 
-    // 2. Wipe and re-insert into Supabase
+    // 2. Wipe all tables in Supabase
     if (supabase) {
       try {
-        // Delete all rows in order (ignoring foreign keys mostly because we delete all)
-        // neq('id', 'nonexistent') is a trick to delete all rows
         await supabase.from('rnf_redemptions').delete().neq('id', 'nonexistent');
         await supabase.from('rnf_activities').delete().neq('id', 'nonexistent');
         await supabase.from('rnf_faqs').delete().neq('id', 'nonexistent');
@@ -665,21 +703,15 @@ async function startServer() {
         await supabase.from('rnf_settings').delete().neq('id', 'nonexistent');
         await supabase.from('rnf_users').delete().neq('id', 'nonexistent');
 
-        // Re-insert pristine defaults
+        // Re-insert only pristine settings and categories (0 partners, 0 users, 0 events, 0 faqs)
         await supabase.from('rnf_settings').insert([settings]);
         await supabase.from('rnf_categories').insert(categories);
-        await supabase.from('rnf_partners').insert(partners);
-        await supabase.from('rnf_users').insert(users);
-        await supabase.from('rnf_events').insert(events);
-        await supabase.from('rnf_faqs').insert(faqs);
-        await supabase.from('rnf_redemptions').insert(redemptions);
-        await supabase.from('rnf_activities').insert(activities);
       } catch (err) {
         console.error("Failed to reset Supabase data:", err);
       }
     }
 
-    res.json({ success: true, message: "Database reset to factory defaults." });
+    res.json({ success: true, message: "Database reset cleanly to 0 items." });
   });
 
   app.get("/favicon.png", (req, res) => {
@@ -859,6 +891,29 @@ async function startServer() {
     return res.json({ success: true, role: 'vendor', partner: vendor });
   });
 
+  function syncPromoToCoupons(partner: Partner, promo: any) {
+    if (!partner.coupons) partner.coupons = [];
+    const couponId = promo.id;
+    const syncedCoupon: Coupon = {
+      id: couponId,
+      type: promo.type === 'free' ? 'free' : (promo.discountValue ? 'redeem' : 'free'),
+      title: { ko: promo.name, en: promo.name, id: promo.name },
+      code: promo.code,
+      cost: promo.type === 'free' ? 0 : (promo.discountValue || 500)
+    };
+    const cIdx = partner.coupons.findIndex(c => c.id === couponId || c.code === promo.code);
+    if (cIdx >= 0) {
+      partner.coupons[cIdx] = syncedCoupon;
+    } else {
+      partner.coupons.push(syncedCoupon);
+    }
+  }
+
+  function removePromoFromCoupons(partner: Partner, promoId: string, promoCode?: string) {
+    if (!partner.coupons) return;
+    partner.coupons = partner.coupons.filter(c => c.id !== promoId && c.code !== promoCode);
+  }
+
   // Promo CRUD for a partner
   app.get("/api/partners/:id/promos", (req, res) => {
     const partner = partners.find(p => p.id === req.params.id);
@@ -872,6 +927,7 @@ async function startServer() {
     const newPromo = { ...req.body, id: "promo_" + Date.now(), isActive: true };
     if (!partners[idx].promos) partners[idx].promos = [];
     partners[idx].promos!.push(newPromo);
+    syncPromoToCoupons(partners[idx], newPromo);
     await dbUpsert('rnf_partners', partners[idx]);
     res.json(newPromo);
   });
@@ -884,6 +940,7 @@ async function startServer() {
     if (prIdx < 0) return res.status(404).json({ error: "Promo not found" });
     promos[prIdx] = { ...promos[prIdx], ...req.body };
     partners[pIdx].promos = promos;
+    syncPromoToCoupons(partners[pIdx], promos[prIdx]);
     await dbUpsert('rnf_partners', partners[pIdx]);
     res.json(promos[prIdx]);
   });
@@ -891,7 +948,11 @@ async function startServer() {
   app.delete("/api/partners/:id/promos/:promoId", async (req, res) => {
     const pIdx = partners.findIndex(p => p.id === req.params.id);
     if (pIdx < 0) return res.status(404).json({ error: "Partner not found" });
+    const deletedPromo = (partners[pIdx].promos || []).find(pr => pr.id === req.params.promoId);
     partners[pIdx].promos = (partners[pIdx].promos || []).filter(pr => pr.id !== req.params.promoId);
+    if (deletedPromo) {
+      removePromoFromCoupons(partners[pIdx], deletedPromo.id, deletedPromo.code);
+    }
     await dbUpsert('rnf_partners', partners[pIdx]);
     res.json({ success: true });
   });
@@ -1344,11 +1405,6 @@ async function startServer() {
         partnerName: partner.name,
         couponCode: coupon.code
       });
-
-      // Update users array in-memory for the first element sync
-      if (user.id === currentUser.id) {
-        currentUser = { ...user };
-      }
 
       await dbUpsert('rnf_redemptions', newRedemption);
       await dbUpsert('rnf_users', user);
