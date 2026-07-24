@@ -47,12 +47,21 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY --from=builder /app/.env* ./
 
+# Create /data directory for persistent storage (mount a volume here in production)
+# data_db.json will be stored at /data/data_db.json to survive container restarts/redeploys
+RUN mkdir -p /data
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
+# Tell the server to use /data as the persistent data directory
+ENV DATA_DIR=/data
 
 # Expose port
 EXPOSE 3000
+
+# Declare /data as a volume so orchestrators can mount persistent storage here
+VOLUME ["/data"]
 
 # Start the server
 CMD ["npm", "run", "start"]

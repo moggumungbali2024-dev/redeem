@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+# Local database file — never commit this, the server manages it at runtime
+data_db.json
+/data/

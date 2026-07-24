@@ -500,120 +500,94 @@ const supabase = hasSupabase ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 async function syncFromSupabase() {
   if (!supabase) {
-    console.log("Supabase not configured in server.ts. Operating in-memory mode.");
+    console.log('[DB] Supabase not configured. Operating in local-file-only mode.');
     return;
   }
-  console.log("Initializing sync with Supabase...");
+  console.log('[DB] Starting smart merge sync with Supabase...');
+
+  // Helper: merge local array with remote. Remote wins on conflict. Local-only pushed to remote.
+  async function mergeCollection(table, localArr, setFn) {
+    try {
+      const { data: remoteArr, error } = await supabase.from(table).select('*');
+      if (error) {
+        console.error('[DB] Error fetching ' + table + ':', error.message);
+        return; // keep local intact on error
+      }
+      const remote = remoteArr || [];
+      const remoteIds = new Set(remote.map(r => r.id));
+      const localOnly = localArr.filter(l => !remoteIds.has(l.id));
+      if (localOnly.length > 0) {
+        console.log('[DB] Pushing ' + localOnly.length + ' local-only records to ' + table + '...');
+        for (const item of localOnly) {
+          const { error: e } = await supabase.from(table).upsert(item);
+          if (e) console.error('[DB] Push failed ' + item.id + ':', e.message);
+        }
+      }
+      const merged = [...remote, ...localOnly];
+      if (merged.length > 0) {
+        setFn(merged);
+        console.log('[DB] ' + table + ': remote=' + remote.length + ' local-only=' + localOnly.length + ' total=' + merged.length);
+      } else if (localArr.length > 0) {
+        // remote is empty, seed from local
+        for (const item of localArr) await supabase.from(table).upsert(item);
+        console.log('[DB] ' + table + ': seeded ' + localArr.length + ' records to Supabase');
+      }
+    } catch (err) {
+      console.error('[DB] Exception during ' + table + ' merge:', err);
+    }
+  }
 
   try {
-    // 1. Settings
+    // 1. Settings (single record)
     const { data: sData, error: sErr } = await supabase.from('rnf_settings').select('*');
-    if (sErr) {
-      console.error("Supabase Sync: Error fetching settings table:", sErr.message, sErr.details || "");
-    }
     if (!sErr && sData && sData.length > 0) {
       settings = sData[0];
-      console.log("Synced settings from Supabase");
+      console.log('[DB] settings: synced from Supabase');
     } else if (!sErr) {
-      await supabase.from('rnf_settings').insert([settings]);
+      await supabase.from('rnf_settings').upsert(settings);
+      console.log('[DB] settings: seeded to Supabase');
     }
 
-    // 2. Categories
-    const { data: catData, error: catErr } = await supabase.from('rnf_categories').select('*');
-    if (catErr) {
-      console.error("Supabase Sync: Error fetching categories table:", catErr.message, catErr.details || "");
-    }
-    if (!catErr && catData && catData.length > 0) {
-      categories = catData;
-      console.log("Synced categories from Supabase");
-    } else if (!catErr) {
-      await supabase.from('rnf_categories').insert(categories);
-    }
+    // 2-8. All collections via merge strategy
+    await mergeCollection('rnf_categories', categories, arr => { categories = arr; });
+    await mergeCollection('rnf_partners', partners, arr => { partners = arr; });
+    await mergeCollection('rnf_users', users, arr => { users = arr; }); // critical
+    await mergeCollection('rnf_events', events, arr => { events = arr; });
+    await mergeCollection('rnf_faqs', faqs, arr => { faqs = arr; });
+    await mergeCollection('rnf_redemptions', redemptions, arr => { redemptions = arr; });
+    await mergeCollection('rnf_activities', activities, arr => { activities = arr; });
 
-    // 3. Partners
-    const { data: pData, error: pErr } = await supabase.from('rnf_partners').select('*');
-    if (pErr) {
-      console.error("Supabase Sync: Error fetching partners table:", pErr.message, pErr.details || "");
-    }
-    if (!pErr && pData) {
-      partners = pData;
-      console.log(`Synced ${pData.length} partners from Supabase`);
-    }
-
-    // 4. Users
-    const { data: uData, error: uErr } = await supabase.from('rnf_users').select('*');
-    if (uErr) {
-      console.error("Supabase Sync: Error fetching users table:", uErr.message, uErr.details || "");
-    }
-    if (!uErr && uData) {
-      users = uData;
-      console.log(`Synced ${uData.length} users from Supabase`);
-    }
-
-    // 5. Events
-    const { data: eData, error: eErr } = await supabase.from('rnf_events').select('*');
-    if (eErr) {
-      console.error("Supabase Sync: Error fetching events table:", eErr.message, eErr.details || "");
-    }
-    if (!eErr && eData) {
-      events = eData;
-      console.log(`Synced ${eData.length} events from Supabase`);
-    }
-
-    // 6. FAQs
-    const { data: faqData, error: faqErr } = await supabase.from('rnf_faqs').select('*');
-    if (faqErr) {
-      console.error("Supabase Sync: Error fetching faqs table:", faqErr.message, faqErr.details || "");
-    }
-    if (!faqErr && faqData) {
-      faqs = faqData;
-      console.log(`Synced ${faqData.length} faqs from Supabase`);
-    }
-
-    // 7. Redemptions
-    const { data: rData, error: rErr } = await supabase.from('rnf_redemptions').select('*');
-    if (rErr) {
-      console.error("Supabase Sync: Error fetching redemptions table:", rErr.message, rErr.details || "");
-    }
-    if (!rErr && rData) {
-      redemptions = rData;
-      console.log(`Synced ${rData.length} redemptions from Supabase`);
-    }
-
-    // 8. Activities
-    const { data: actData, error: actErr } = await supabase.from('rnf_activities').select('*');
-    if (actErr) {
-      console.error("Supabase Sync: Error fetching activities table:", actErr.message, actErr.details || "");
-    }
-    if (!actErr && actData) {
-      activities = actData;
-      console.log(`Synced ${actData.length} activities from Supabase`);
-    }
-
-    console.log("Supabase initialization and sync completed successfully.");
+    console.log('[DB] Sync complete. Total: ' + users.length + ' users, ' + partners.length + ' partners.');
   } catch (err) {
-    console.error("Failed to sync from Supabase. Defaulting to in-memory/local cache:", err);
+    console.error('[DB] Fatal sync error — keeping local data intact:', err);
   }
 }
 
-const LOCAL_DB_FILE = path.join(process.cwd(), "data_db.json");
+// Use DATA_DIR env var for persistent storage (set to /data in Docker via volume mount)
+// Falls back to cwd for local development
+const DATA_DIR = process.env.DATA_DIR || process.cwd();
+const LOCAL_DB_FILE = path.join(DATA_DIR, "data_db.json");
 
 function loadFromLocalDB() {
   try {
+    // Ensure the data directory exists (important for Docker volume /data)
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     if (fs.existsSync(LOCAL_DB_FILE)) {
       const raw = fs.readFileSync(LOCAL_DB_FILE, "utf-8");
       const data = JSON.parse(raw);
       if (data.settings) settings = data.settings;
       if (Array.isArray(data.categories) && data.categories.length > 0) categories = data.categories;
-      if (Array.isArray(data.partners)) partners = data.partners;
-      if (Array.isArray(data.users)) users = data.users;
+      if (Array.isArray(data.partners) && data.partners.length > 0) partners = data.partners;
+      if (Array.isArray(data.users) && data.users.length > 0) users = data.users;
       if (Array.isArray(data.events)) events = data.events;
       if (Array.isArray(data.faqs)) faqs = data.faqs;
       if (Array.isArray(data.redemptions)) redemptions = data.redemptions;
       if (Array.isArray(data.activities)) activities = data.activities;
-      console.log(`[DB] Loaded data from local file data_db.json (${users.length} users, ${partners.length} partners).`);
+      console.log(`[DB] Loaded from ${LOCAL_DB_FILE}: ${users.length} users, ${partners.length} partners.`);
     } else {
-      console.log("[DB] data_db.json does not exist yet. Initializing with default seed data...");
+      console.log(`[DB] ${LOCAL_DB_FILE} not found. Will use defaults and seed Supabase on startup.`);
       saveToLocalDB();
     }
   } catch (err) {
