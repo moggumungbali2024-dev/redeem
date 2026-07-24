@@ -1781,196 +1781,192 @@ export default function VendorApp() {
 
       {/* PROMO TAB */}
       {activeTab === 'promos' && (
-        <div className="p-4 flex-1 overflow-y-auto max-w-[800px] mx-auto w-full pb-20">
-          <div className="flex flex-col gap-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-black uppercase">Promo Manager</h2>
-                <p className="text-xs font-bold text-stone-500">Kelola kode promo untuk pelanggan kamu</p>
-              </div>
-              <button onClick={() => { setEditingPromo(null); setPromoName(''); setPromoCode(''); setPromoType('discount_percent'); setPromoDiscount(''); setPromoStart(''); setPromoEnd(''); setPromoTerms(''); setPromoModalOpen(true); }} className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5">
-                <Plus size={14} strokeWidth={3}/> Tambah Promo
-              </button>
+        <div className="flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-black uppercase">Promo Manager</h2>
+              <p className="text-xs font-bold text-stone-500">Kelola kode promo untuk pelanggan kamu</p>
             </div>
-
-            {promos.length === 0 ? (
-              <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
-                <div className="text-5xl mb-3">🏷️</div>
-                <h3 className="font-black uppercase">Belum Ada Promo</h3>
-                <p className="text-sm text-stone-500 font-bold mt-1">Buat promo pertama untuk menarik pelanggan!</p>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {promos.map(p => (
-                  <div key={p.id} className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="bg-[#FDD835] border-2 border-black font-mono font-black text-sm px-2.5 py-0.5 rounded-lg">{p.code}</span>
-                          <span className={`text-xs font-black uppercase px-2 py-0.5 rounded-full border-2 ${p.isActive ? 'bg-green-100 border-green-700 text-green-800' : 'bg-stone-100 border-stone-400 text-stone-500'}`}>{p.isActive ? 'Aktif' : 'Nonaktif'}</span>
-                        </div>
-                        <p className="font-black text-base mt-1">{p.name}</p>
-                        <p className="text-xs font-bold text-stone-500">{p.type === 'discount_percent' ? `${p.discountValue}% off` : p.type === 'discount_nominal' ? `Rp${p.discountValue?.toLocaleString()} off` : p.type === 'free' ? 'Free Item' : p.type === 'bogo' ? 'Buy 1 Get 1' : p.type === 'cashback' ? `${p.discountValue}% cashback` : 'Special'}</p>
-                        <p className="text-xs font-bold text-stone-400">{p.startDate} → {p.endDate}</p>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button onClick={async () => { await api.updatePromo(selectedVendorId!, p.id, { isActive: !p.isActive }); api.getPromos(selectedVendorId!).then(setPromos); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all">{p.isActive ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} className="text-stone-400" />}</button>
-                        <button onClick={() => { setEditingPromo(p); setPromoName(p.name); setPromoCode(p.code); setPromoType(p.type); setPromoDiscount(String(p.discountValue || '')); setPromoStart(p.startDate); setPromoEnd(p.endDate); setPromoTerms(p.terms); setPromoModalOpen(true); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all"><Edit3 size={16} /></button>
-                        <button onClick={async () => { if (confirm('Hapus promo ini?')) { await api.deletePromo(selectedVendorId!, p.id); api.getPromos(selectedVendorId!).then(setPromos); } }} className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 transition-all text-rose-700"><Trash2 size={16} /></button>
-                      </div>
-                    </div>
-                    {p.terms && <p className="text-[11px] font-bold text-stone-500 bg-stone-50 border border-stone-200 p-2 rounded-lg">{p.terms}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
+            <button onClick={() => { setEditingPromo(null); setPromoName(''); setPromoCode(''); setPromoType('discount_percent'); setPromoDiscount(''); setPromoStart(''); setPromoEnd(''); setPromoTerms(''); setPromoModalOpen(true); }} className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5">
+              <Plus size={14} strokeWidth={3}/> Tambah Promo
+            </button>
           </div>
+
+          {promos.length === 0 ? (
+            <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
+              <div className="text-5xl mb-3">🏷️</div>
+              <h3 className="font-black uppercase">Belum Ada Promo</h3>
+              <p className="text-sm text-stone-500 font-bold mt-1">Buat promo pertama untuk menarik pelanggan!</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {promos.map(p => (
+                <div key={p.id} className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-[#FDD835] border-2 border-black font-mono font-black text-sm px-2.5 py-0.5 rounded-lg">{p.code}</span>
+                        <span className={`text-xs font-black uppercase px-2 py-0.5 rounded-full border-2 ${p.isActive ? 'bg-green-100 border-green-700 text-green-800' : 'bg-stone-100 border-stone-400 text-stone-500'}`}>{p.isActive ? 'Aktif' : 'Nonaktif'}</span>
+                      </div>
+                      <p className="font-black text-base mt-1">{p.name}</p>
+                      <p className="text-xs font-bold text-stone-500">{p.type === 'discount_percent' ? `${p.discountValue}% off` : p.type === 'discount_nominal' ? `Rp${p.discountValue?.toLocaleString()} off` : p.type === 'free' ? 'Free Item' : p.type === 'bogo' ? 'Buy 1 Get 1' : p.type === 'cashback' ? `${p.discountValue}% cashback` : 'Special'}</p>
+                      <p className="text-xs font-bold text-stone-400">{p.startDate} → {p.endDate}</p>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={async () => { await api.updatePromo(selectedVendorId!, p.id, { isActive: !p.isActive }); api.getPromos(selectedVendorId!).then(setPromos); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all">{p.isActive ? <ToggleRight size={16} className="text-green-600" /> : <ToggleLeft size={16} className="text-stone-400" />}</button>
+                      <button onClick={() => { setEditingPromo(p); setPromoName(p.name); setPromoCode(p.code); setPromoType(p.type); setPromoDiscount(String(p.discountValue || '')); setPromoStart(p.startDate); setPromoEnd(p.endDate); setPromoTerms(p.terms); setPromoModalOpen(true); }} className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100 transition-all"><Edit3 size={16} /></button>
+                      <button onClick={async () => { if (confirm('Hapus promo ini?')) { await api.deletePromo(selectedVendorId!, p.id); api.getPromos(selectedVendorId!).then(setPromos); } }} className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 transition-all text-rose-700"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                  {p.terms && <p className="text-[11px] font-bold text-stone-500 bg-stone-50 border border-stone-200 p-2 rounded-lg">{p.terms}</p>}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {/* MENU MANAGER TAB */}
       {activeTab === 'menu' && (
-        <div className="p-4 flex-1 overflow-y-auto max-w-[800px] mx-auto w-full pb-24">
-          <div className="flex flex-col gap-5">
-            {/* Header */}
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-2xl font-black uppercase">Menu Manager</h2>
-                <p className="text-xs font-bold text-stone-500">Kelola menu unggulan & link menu digitalmu</p>
-              </div>
+        <div className="flex flex-col gap-5">
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div>
+              <h2 className="text-2xl font-black uppercase">Menu Manager</h2>
+              <p className="text-xs font-bold text-stone-500">Kelola menu unggulan & link menu digitalmu</p>
+            </div>
+            <button
+              onClick={() => {
+                setEditingMenuItemIdx(null);
+                setMenuItemName('');
+                setMenuItemPrice('');
+                setMenuItemImage('');
+                setMenuItemDesc('');
+                setMenuItemModalOpen(true);
+              }}
+              className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5"
+            >
+              <Plus size={14} strokeWidth={3}/> Tambah Menu
+            </button>
+          </div>
+
+          {/* Digital Menu URL */}
+          <div className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Link size={16} strokeWidth={3} />
+              <h3 className="font-black text-base uppercase">Link Menu Digital</h3>
+            </div>
+            <p className="text-xs font-bold text-stone-500">Paste link menu PDF, Google Drive, Canva, atau Instagram kamu</p>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={vendorMenuUrl}
+                onChange={e => setVendorMenuUrl(e.target.value)}
+                placeholder="https://bit.ly/menu-restoran-saya"
+                className="flex-1 border-4 border-black rounded-xl p-3 font-bold text-sm bg-[#FFF8F0] focus:outline-none"
+              />
               <button
-                onClick={() => {
-                  setEditingMenuItemIdx(null);
-                  setMenuItemName('');
-                  setMenuItemPrice('');
-                  setMenuItemImage('');
-                  setMenuItemDesc('');
-                  setMenuItemModalOpen(true);
+                onClick={async () => {
+                  if (!selectedVendorId) return;
+                  setSavingMenu(true);
+                  await api.updatePartner(selectedVendorId, { menuUrl: vendorMenuUrl });
+                  await loadData();
+                  setSavingMenu(false);
+                  showToast('Link menu digital berhasil disimpan! 🔗');
                 }}
-                className="bg-[#FDD835] border-4 border-black px-3 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center gap-1.5"
+                className="bg-black text-white border-4 border-black px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none"
               >
-                <Plus size={14} strokeWidth={3}/> Tambah Menu
+                {savingMenu ? '...' : 'Simpan'}
               </button>
             </div>
+            {vendorMenuUrl && (
+              <a href={vendorMenuUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-black text-[#1E88E5] underline flex items-center gap-1">
+                <Eye size={12} /> Preview link menu
+              </a>
+            )}
+          </div>
 
-            {/* Digital Menu URL */}
-            <div className="bg-white border-4 border-black rounded-2xl p-4 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <Link size={16} strokeWidth={3} />
-                <h3 className="font-black text-base uppercase">Link Menu Digital</h3>
+          {/* Menu Items (Bestsellers/Highlights) */}
+          <div className="flex flex-col gap-3">
+            <h3 className="font-black text-base uppercase flex items-center gap-2">
+              <Star size={16} strokeWidth={3} fill="#FDD835" />
+              Menu Unggulan ({vendorMenuItems.length} item)
+            </h3>
+
+            {vendorMenuItems.length === 0 ? (
+              <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
+                <div className="text-5xl mb-3">🍽️</div>
+                <h3 className="font-black uppercase">Belum Ada Menu</h3>
+                <p className="text-sm text-stone-500 font-bold mt-1">Tambahkan menu unggulanmu untuk menarik pelanggan!</p>
               </div>
-              <p className="text-xs font-bold text-stone-500">Paste link menu PDF, Google Drive, Canva, atau Instagram kamu</p>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={vendorMenuUrl}
-                  onChange={e => setVendorMenuUrl(e.target.value)}
-                  placeholder="https://bit.ly/menu-restoran-saya"
-                  className="flex-1 border-4 border-black rounded-xl p-3 font-bold text-sm bg-[#FFF8F0] focus:outline-none"
-                />
-                <button
-                  onClick={async () => {
-                    if (!selectedVendorId) return;
-                    setSavingMenu(true);
-                    await api.updatePartner(selectedVendorId, { menuUrl: vendorMenuUrl });
-                    await loadData();
-                    setSavingMenu(false);
-                    showToast('Link menu digital berhasil disimpan! 🔗');
-                  }}
-                  className="bg-black text-white border-4 border-black px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-[3px_3px_0px_rgba(0,0,0,1)] active:shadow-none"
-                >
-                  {savingMenu ? '...' : 'Simpan'}
-                </button>
-              </div>
-              {vendorMenuUrl && (
-                <a href={vendorMenuUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-black text-[#1E88E5] underline flex items-center gap-1">
-                  <Eye size={12} /> Preview link menu
-                </a>
-              )}
-            </div>
-
-            {/* Menu Items (Bestsellers/Highlights) */}
-            <div className="flex flex-col gap-3">
-              <h3 className="font-black text-base uppercase flex items-center gap-2">
-                <Star size={16} strokeWidth={3} fill="#FDD835" />
-                Menu Unggulan ({vendorMenuItems.length} item)
-              </h3>
-
-              {vendorMenuItems.length === 0 ? (
-                <div className="text-center py-16 bg-white border-4 border-dashed border-stone-300 rounded-3xl">
-                  <div className="text-5xl mb-3">🍽️</div>
-                  <h3 className="font-black uppercase">Belum Ada Menu</h3>
-                  <p className="text-sm text-stone-500 font-bold mt-1">Tambahkan menu unggulanmu untuk menarik pelanggan!</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {vendorMenuItems.map((item, idx) => (
-                    <div key={idx} className="bg-white border-4 border-black rounded-2xl p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl border-2 border-black shrink-0" />
-                      ) : (
-                        <div className="w-16 h-16 bg-[#FDD835] border-2 border-black rounded-xl shrink-0 flex items-center justify-center text-2xl">🍽️</div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-base leading-tight truncate">{item.name}</p>
-                        {item.description && <p className="text-xs font-bold text-stone-500 truncate">{item.description}</p>}
-                        <span className="bg-[#FDD835] border-2 border-black font-black text-xs px-2 py-0.5 rounded-lg inline-block mt-1">{item.price}</span>
-                      </div>
-                      <div className="flex flex-col gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditingMenuItemIdx(idx);
-                            setMenuItemName(item.name);
-                            setMenuItemPrice(item.price);
-                            setMenuItemImage(item.image || '');
-                            setMenuItemDesc(item.description || '');
-                            setMenuItemModalOpen(true);
-                          }}
-                          className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('Hapus menu ini?')) return;
-                            const updated = vendorMenuItems.filter((_, i) => i !== idx);
-                            setVendorMenuItems(updated);
-                            await api.updatePartner(selectedVendorId!, {
-                              bestsellers: updated.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
-                            });
-                            await loadData();
-                            showToast('Menu dihapus.');
-                          }}
-                          className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {vendorMenuItems.map((item, idx) => (
+                  <div key={idx} className="bg-white border-4 border-black rounded-2xl p-3 shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-3">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-xl border-2 border-black shrink-0" />
+                    ) : (
+                      <div className="w-16 h-16 bg-[#FDD835] border-2 border-black rounded-xl shrink-0 flex items-center justify-center text-2xl">🍽️</div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-base leading-tight truncate">{item.name}</p>
+                      {item.description && <p className="text-xs font-bold text-stone-500 truncate">{item.description}</p>}
+                      <span className="bg-[#FDD835] border-2 border-black font-black text-xs px-2 py-0.5 rounded-lg inline-block mt-1">{item.price}</span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <div className="flex flex-col gap-1.5">
+                      <button
+                        onClick={() => {
+                          setEditingMenuItemIdx(idx);
+                          setMenuItemName(item.name);
+                          setMenuItemPrice(item.price);
+                          setMenuItemImage(item.image || '');
+                          setMenuItemDesc(item.description || '');
+                          setMenuItemModalOpen(true);
+                        }}
+                        className="p-2 border-2 border-black rounded-lg bg-stone-50 hover:bg-stone-100"
+                      >
+                        <Edit3 size={14} />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Hapus menu ini?')) return;
+                          const updated = vendorMenuItems.filter((_, i) => i !== idx);
+                          setVendorMenuItems(updated);
+                          await api.updatePartner(selectedVendorId!, {
+                            bestsellers: updated.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
+                          });
+                          await loadData();
+                          showToast('Menu dihapus.');
+                        }}
+                        className="p-2 border-2 border-rose-900 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-              {/* Save Menu Items Button */}
-              {vendorMenuItems.length > 0 && (
-                <button
-                  onClick={async () => {
-                    if (!selectedVendorId) return;
-                    setSavingMenu(true);
-                    await api.updatePartner(selectedVendorId, {
-                      bestsellers: vendorMenuItems.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
-                    });
-                    await loadData();
-                    setSavingMenu(false);
-                    showToast('Menu unggulan tersimpan! 🍽️');
-                  }}
-                  className="w-full bg-black text-[#FDD835] border-4 border-black py-4 rounded-2xl font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={16} strokeWidth={3} />
-                  {savingMenu ? 'Menyimpan...' : 'Simpan Semua Menu'}
-                </button>
-              )}
-            </div>
+            {/* Save Menu Items Button */}
+            {vendorMenuItems.length > 0 && (
+              <button
+                onClick={async () => {
+                  if (!selectedVendorId) return;
+                  setSavingMenu(true);
+                  await api.updatePartner(selectedVendorId, {
+                    bestsellers: vendorMenuItems.map(m => ({ name: { ko: m.name, en: m.name, id: m.name }, price: m.price, image: m.image, description: m.description }))
+                  });
+                  await loadData();
+                  setSavingMenu(false);
+                  showToast('Menu unggulan tersimpan! 🍽️');
+                }}
+                className="w-full bg-black text-[#FDD835] border-4 border-black py-4 rounded-2xl font-black uppercase shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-1 active:translate-y-1 flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={16} strokeWidth={3} />
+                {savingMenu ? 'Menyimpan...' : 'Simpan Semua Menu'}
+              </button>
+            )}
           </div>
         </div>
       )}
