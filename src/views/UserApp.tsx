@@ -62,6 +62,25 @@ export default function UserApp() {
   const [localNotification, setLocalNotification] = useState<{ id: string; title: string; body: string } | null>(null);
   const [showBirthdayAlert, setShowBirthdayAlert] = useState(false);
 
+  // Auto-logout: called whenever any API returns 404 (user not found in server DB)
+  const forceLogout = () => {
+    localStorage.removeItem('userId');
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate('/');
+  };
+
+  // Global listener for 'user-not-found' events dispatched by api.ts on 404 responses
+  useEffect(() => {
+    const handler = () => {
+      console.warn('[Auth] User not found on server (404). Auto-logging out...');
+      forceLogout();
+    };
+    window.addEventListener('user-not-found', handler);
+    return () => window.removeEventListener('user-not-found', handler);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!user || !user.dob) return;
     
@@ -77,9 +96,11 @@ export default function UserApp() {
         points: newPoints, 
         lastBirthdayRewardYear: currentYear 
       }).then(newUser => {
-        setUser(newUser);
-        setShowBirthdayAlert(true);
-        triggerHaptic('heavy');
+        if (newUser) {
+          setUser(newUser);
+          setShowBirthdayAlert(true);
+          triggerHaptic('heavy');
+        }
       }).catch(console.error);
     }
   }, [user?.dob, user?.lastBirthdayRewardYear]);
@@ -87,7 +108,7 @@ export default function UserApp() {
   useEffect(() => {
     api.getPartners().then(setPartners);
     api.getCategories().then(setCategories);
-    api.getUser().then(setUser);
+    api.getUser().then(u => { if (u) setUser(u); }); // null = 404, forceLogout triggered via event
     api.getEvents().then(setEvents);
     api.getActivities().then(setActivities);
 
@@ -1375,7 +1396,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
   const handleCheckIn = () => {
     setCheckInTime(Date.now());
     setPointAnim({ amount: 50, type: 'earn' });
-    api.updateUser({ ...user, points: (user.points || 0) + 50 }).then(setUser);
+    api.updateUser({ ...user, points: (user.points || 0) + 50 }).then(u => { if (u) setUser(u); });
     
     // Simulate 30min stay (show review reward prompt after 3 sec)
     setTimeout(() => {
@@ -1425,7 +1446,7 @@ function PartnerDetail({ partners, categories, user, setUser }: { partners: Part
     setUserComment('');
     setHasReviewed(true);
     setPointAnim({ amount: 500, type: 'earn' });
-    api.updateUser({ ...user, points: (user.points || 0) + 500 }).then(setUser);
+    api.updateUser({ ...user, points: (user.points || 0) + 500 }).then(u => { if (u) setUser(u); });
   };
 
   return (

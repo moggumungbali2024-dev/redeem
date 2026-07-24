@@ -1,5 +1,11 @@
 import { Partner, Category, AppSettings, ClickData, User, AppEvent, Faq, Activity, Redemption, Promo } from './types';
 
+// Global helper: dispatch event when user session is invalid (404)
+// UserApp root listens for this and triggers a clean logout
+export function dispatchUserNotFound() {
+  window.dispatchEvent(new CustomEvent('user-not-found'));
+}
+
 export const api = {
 
   login: async (whatsapp: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -143,17 +149,25 @@ export const api = {
     const res = await fetch('/api/analytics');
     return res.json();
   },
-  getUser: async (): Promise<User> => {
+  getUser: async (): Promise<User | null> => {
     const userId = localStorage.getItem('userId') || 'u1';
     const res = await fetch(`/api/user?userId=${userId}`);
+    if (res.status === 404) {
+      dispatchUserNotFound();
+      return null;
+    }
     return res.json();
   },
-  updateUser: async (user: Partial<User>): Promise<User> => {
+  updateUser: async (user: Partial<User>): Promise<User | null> => {
     const res = await fetch('/api/user', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...user, userId: localStorage.getItem('userId') || 'u1' }),
     });
+    if (res.status === 404) {
+      dispatchUserNotFound();
+      return null;
+    }
     return res.json();
   },
   claimDailyMission: async (): Promise<{ success: boolean; user: User }> => {
@@ -181,12 +195,13 @@ export const api = {
     });
     return res.json();
   },
-  saveCoupon: async (couponId: string): Promise<User> => {
+  saveCoupon: async (couponId: string): Promise<User | null> => {
     const res = await fetch('/api/user/save_coupon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ couponId, userId: localStorage.getItem('userId') || 'u1' }),
     });
+    if (res.status === 404) { dispatchUserNotFound(); return null; }
     return res.json();
   },
   redeemCoupon: async (couponId: string, cost: number): Promise<{ success: boolean; user?: User; error?: string }> => {
@@ -195,6 +210,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ couponId, cost, userId: localStorage.getItem('userId') || 'u1' }),
     });
+    if (res.status === 404) { dispatchUserNotFound(); return { success: false, error: 'User not found' }; }
     return res.json();
   },
   getEvents: async (): Promise<AppEvent[]> => {
