@@ -1397,7 +1397,8 @@ async function startServer() {
 
   // Events
   app.get("/api/events", (req, res) => {
-    res.json(events);
+    const sorted = [...events].sort((a, b) => b.id.localeCompare(a.id));
+    res.json(sorted);
   });
 
   app.post("/api/events", async (req, res) => {

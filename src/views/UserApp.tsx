@@ -781,6 +781,7 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
   const navigate = useNavigate();
   const { lang, setLang, t } = useI18n();
   const [currentEvent, setCurrentEvent] = useState(0);
+  const [currentVipAd, setCurrentVipAd] = useState(0);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const prevPoints = useRef(user.points || 0);
@@ -813,6 +814,16 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
     }, 4000);
     return () => clearInterval(int);
   }, [events]);
+
+  const vipAds = partners.filter(p => p.tier === 'vip' && p.isAdFeatured && p.adBannerUrl);
+
+  useEffect(() => {
+    if (vipAds.length <= 1) return;
+    const int = setInterval(() => {
+      setCurrentVipAd(prev => (prev + 1) % vipAds.length);
+    }, 4000);
+    return () => clearInterval(int);
+  }, [vipAds.length]);
 
   const userLevel = Math.floor((user.points || 0) / 10000) + 1;
 
@@ -938,8 +949,8 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
 
       {/* Sponsored VIP Ads */}
       {(() => {
-        const vipAds = partners.filter(p => p.tier === 'vip' && p.isAdFeatured && p.adBannerUrl);
         if (vipAds.length === 0) return null;
+        const ad = vipAds[currentVipAd] || vipAds[0];
 
         return (
           <div className="flex flex-col gap-1.5 mt-1 text-left">
@@ -956,40 +967,49 @@ function Home({ categories, partners, user, events, activities, setUser }: { cat
               <span className="text-[8px] font-black uppercase bg-black text-[#FDD835] px-1.5 py-0.5 rounded border border-[#FDD835] tracking-widest">VIP ADS</span>
             </div>
 
-            <div className="flex gap-4 overflow-x-auto pb-2 pt-1 scrollbar-hide snap-x">
-              {vipAds.map(ad => (
-                <div 
-                  key={ad.id}
-                  onClick={() => {
-                    triggerHaptic('tap');
-                    api.trackClick(ad.id, 'ad_click');
-                    navigate(`/partner/${ad.id}`);
-                  }}
-                  className="relative min-w-full md:min-w-[480px] h-28 border-[3px] border-black rounded-[20px] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-stone-900 cursor-pointer active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all snap-center shrink-0 flex flex-col justify-end"
-                >
-                  {(ad.adBannerUrl || '').endsWith('.mp4') ? (
-                    <video src={ad.adBannerUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" autoPlay loop muted playsInline />
-                  ) : (
-                    <img src={ad.adBannerUrl} className="absolute inset-0 w-full h-full object-cover opacity-80" alt="VIP Ad" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent flex items-center p-4">
-                    <div className="flex gap-3.5 items-center w-4/5">
-                      <img src={ad.logo} className="w-12 h-12 rounded-xl border-2 border-black object-cover shrink-0 shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white" alt="logo" />
-                      <div className="text-left">
-                        <span className="text-[9px] font-black bg-[#FDD835] text-black px-2 py-0.5 rounded border-2 border-black uppercase tracking-wider mb-1.5 inline-block">
-                          {ad.name}
-                        </span>
-                        <p className="text-white font-black text-xs leading-tight line-clamp-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
-                          {t(ad.adText || { ko: "특별 혜택을 확인하려면 탭하세요!", en: "Tap to unlock exclusive VIP benefits!", id: "Ketuk untuk membuka keuntungan VIP eksklusif!" })}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute bottom-3 right-3 bg-white text-black border-2 border-black text-[9px] font-black uppercase px-2.5 py-1 rounded-xl shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 select-none">
-                    {t({ ko: '가기 ➔', en: 'Visit ➔', id: 'Kunjungi ➔' })}
+            <div 
+              onClick={() => {
+                triggerHaptic('tap');
+                api.trackClick(ad.id, 'ad_click');
+                navigate(`/partner/${ad.id}`);
+              }}
+              className="relative w-full h-28 border-[3px] border-black rounded-[20px] overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-stone-900 cursor-pointer active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all flex flex-col justify-end"
+            >
+              <AnimatePresence mode="wait">
+                {(ad.adBannerUrl || '').endsWith('.mp4') ? (
+                  <motion.video 
+                    key={ad.id}
+                    src={ad.adBannerUrl} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-80" 
+                    autoPlay loop muted playsInline 
+                    initial={{ opacity: 0 }} animate={{ opacity: 0.8 }} exit={{ opacity: 0 }}
+                  />
+                ) : (
+                  <motion.img 
+                    key={ad.id}
+                    src={ad.adBannerUrl} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-80" 
+                    alt="VIP Ad" 
+                    initial={{ opacity: 0 }} animate={{ opacity: 0.8 }} exit={{ opacity: 0 }}
+                  />
+                )}
+              </AnimatePresence>
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent flex items-center p-4">
+                <div className="flex gap-3.5 items-center w-4/5">
+                  <img src={ad.logo} className="w-12 h-12 rounded-xl border-2 border-black object-cover shrink-0 shadow-[2px_2px_0px_rgba(0,0,0,1)] bg-white" alt="logo" />
+                  <div className="text-left">
+                    <span className="text-[9px] font-black bg-[#FDD835] text-black px-2 py-0.5 rounded border-2 border-black uppercase tracking-wider mb-1.5 inline-block">
+                      {ad.name}
+                    </span>
+                    <p className="text-white font-black text-xs leading-tight line-clamp-2 drop-shadow-[2px_2px_0px_rgba(0,0,0,1)]">
+                      {t(ad.adText || { ko: "특별 혜택을 확인하려면 탭하세요!", en: "Tap to unlock exclusive VIP benefits!", id: "Ketuk untuk membuka keuntungan VIP eksklusif!" })}
+                    </p>
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className="absolute bottom-3 right-3 bg-white text-black border-2 border-black text-[9px] font-black uppercase px-2.5 py-1 rounded-xl shadow-[2px_2px_0px_rgba(0,0,0,1)] active:translate-y-0.5 select-none">
+                {t({ ko: '가기 ➔', en: 'Visit ➔', id: 'Kunjungi ➔' })}
+              </div>
             </div>
           </div>
         );

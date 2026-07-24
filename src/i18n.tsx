@@ -14,9 +14,10 @@ const I18nContext = createContext<I18nContextType | undefined>(undefined);
 export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lang, setLang] = useState<Language>('en');
 
-  const t = (str: LocalizedString | string) => {
+  const t = (str: LocalizedString | string | null | undefined) => {
+    if (!str) return '';
     if (typeof str === 'string') return str;
-    return str[lang] || str['en'] || '';
+    return (str as any)[lang] || (str as any)['en'] || '';
   };
 
   return (
